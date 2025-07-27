@@ -2,9 +2,16 @@
 
 import { redirect } from 'next/navigation';
 import { createCheckoutSession } from './stripe';
-import { withUser } from '@/lib/auth/middleware';
+import { getUser } from '@/lib/db/queries';
 
-export const checkoutAction = withUser(async (formData, user) => {
+export const checkoutAction = async (formData: FormData) => {
+  const user = await getUser();
   const priceId = formData.get('priceId') as string;
+  
+  if (!user) {
+    // Redirect to sign-in with pricing information
+    redirect(`/sign-in?redirect=pricing&priceId=${encodeURIComponent(priceId)}`);
+  }
+
   await createCheckoutSession({ priceId });
-});
+};

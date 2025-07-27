@@ -74,13 +74,22 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
   ]);
 
   const redirectTo = formData.get('redirect') as string | null;
-  if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
+  const priceId = formData.get('priceId') as string | null;
+  
+  if (redirectTo === 'checkout' && priceId) {
     return createCheckoutSession({ priceId });
   }
 
-  // For testing, let's just return success instead of redirecting
-  return { success: 'Sign in successful!' };
+  if (redirectTo === 'pricing' && priceId) {
+    // User came from pricing page, redirect directly to checkout
+    return createCheckoutSession({ priceId });
+  }
+
+  if (redirectTo) {
+    redirect(`/${redirectTo}`);
+  }
+
+  redirect('/dashboard');
 });
 
 const signUpSchema = z.object({
@@ -129,13 +138,22 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   ]);
 
   const redirectTo = formData.get('redirect') as string | null;
-  if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
+  const priceId = formData.get('priceId') as string | null;
+  
+  if (redirectTo === 'checkout' && priceId) {
     return createCheckoutSession({ priceId });
   }
 
-  // For testing, let's just return success instead of redirecting
-  return { success: 'Sign up successful!' };
+  if (redirectTo === 'pricing' && priceId) {
+    // User came from pricing page, redirect directly to checkout
+    return createCheckoutSession({ priceId });
+  }
+
+  if (redirectTo) {
+    redirect(`/${redirectTo}`);
+  }
+
+  redirect('/dashboard');
 });
 
 export async function signOut() {

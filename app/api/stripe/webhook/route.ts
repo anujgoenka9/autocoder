@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { handleSubscriptionChange, stripe } from '@/lib/payments/stripe';
+import { stripe } from '@/lib/payments/stripe';
 import { NextRequest, NextResponse } from 'next/server';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -21,10 +21,20 @@ export async function POST(request: NextRequest) {
   }
 
   switch (event.type) {
+    case 'customer.subscription.created':
+      console.log('Subscription created:', event.data.object.id);
+      break;
     case 'customer.subscription.updated':
+      console.log('Subscription updated:', event.data.object.id);
+      break;
     case 'customer.subscription.deleted':
-      const subscription = event.data.object as Stripe.Subscription;
-      await handleSubscriptionChange(subscription);
+      console.log('Subscription cancelled:', event.data.object.id);
+      break;
+    case 'invoice.payment_succeeded':
+      console.log('Payment succeeded:', event.data.object.id);
+      break;
+    case 'invoice.payment_failed':
+      console.log('Payment failed:', event.data.object.id);
       break;
     default:
       console.log(`Unhandled event type ${event.type}`);

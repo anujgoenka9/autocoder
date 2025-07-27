@@ -16,8 +16,7 @@ async function createStripeProducts() {
     unit_amount: 1200, // $12 in cents
     currency: 'usd',
     recurring: {
-      interval: 'month',
-      trial_period_days: 7,
+      interval: 'month'
     },
   });
 
@@ -56,6 +55,8 @@ async function seed() {
       ipAddress: '127.0.0.1',
     },
   ]);
+
+  console.log('Sample activity logs created.');
 
   await createStripeProducts();
 }
