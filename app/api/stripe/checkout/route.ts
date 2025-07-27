@@ -4,6 +4,7 @@ import { users } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
+import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -14,7 +15,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['customer', 'subscription'],
+    });
 
     const userId = session.client_reference_id;
     if (!userId) {
@@ -31,8 +34,37 @@ export async function GET(request: NextRequest) {
       throw new Error('User not found in database.');
     }
 
-    // For now, we'll just set the session and redirect to dashboard
-    // You can add subscription tracking to the users table later if needed
+    // Extract subscription information
+    const customerId = typeof session.customer === 'string' 
+      ? session.customer 
+      : session.customer?.id;
+    
+    const subscriptionId = typeof session.subscription === 'string' 
+      ? session.subscription 
+      : session.subscription?.id;
+
+    if (customerId && subscriptionId) {
+      // Get subscription details
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+        expand: ['items.data.price.product'],
+      });
+
+      const plan = subscription.items.data[0]?.price;
+      const productName = (plan?.product as Stripe.Product)?.name;
+
+      // Update user subscription in database
+      await db
+        .update(users)
+        .set({
+          subscriptionPlan: productName?.toLowerCase() === 'plus' ? 'plus' : 'base',
+          subscriptionStatus: subscription.status,
+          stripeCustomerId: customerId,
+          stripeSubscriptionId: subscriptionId,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, Number(userId)));
+    }
+
     await setSession(user[0]);
     return NextResponse.redirect(new URL('/dashboard?payment=success', request.url));
   } catch (error) {

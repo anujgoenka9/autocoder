@@ -3,14 +3,16 @@ import { Check } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
 import { Button } from '@/components/ui/button';
+import { getUser } from '@/lib/db/queries';
 
 // Prices are fresh for one hour max
 export const revalidate = 3600;
 
 export default async function PricingPage() {
-  const [prices, products] = await Promise.all([
+  const [prices, products, user] = await Promise.all([
     getStripePrices(),
     getStripeProducts(),
+    getUser(),
   ]);
 
   const plusPlan = products.find((product) => product.name === 'Plus');
@@ -30,6 +32,8 @@ export default async function PricingPage() {
           ]}
           priceId={null}
           isFree={true}
+          isCurrentPlan={user?.subscriptionPlan === 'base'}
+          userSubscription={user?.subscriptionPlan}
         />
         <PricingCard
           name={plusPlan?.name || 'Plus'}
@@ -42,6 +46,8 @@ export default async function PricingPage() {
           ]}
           priceId={plusPrice?.id}
           isFree={false}
+          isCurrentPlan={user?.subscriptionPlan === 'plus'}
+          userSubscription={user?.subscriptionPlan}
         />
       </div>
     </main>
@@ -55,6 +61,8 @@ function PricingCard({
   features,
   priceId,
   isFree,
+  isCurrentPlan,
+  userSubscription,
 }: {
   name: string;
   price: number;
@@ -62,7 +70,12 @@ function PricingCard({
   features: string[];
   priceId?: string | null;
   isFree: boolean;
+  isCurrentPlan: boolean;
+  userSubscription?: string | null;
 }) {
+  const showUpgradeButton = !isFree && !isCurrentPlan;
+  const showCurrentPlanButton = isCurrentPlan;
+  
   return (
     <div className="pt-6">
       <h2 className="text-2xl font-medium text-gray-900 mb-2">{name}</h2>
@@ -88,19 +101,31 @@ function PricingCard({
           </li>
         ))}
       </ul>
-      {!isFree && priceId && (
+      
+      {showUpgradeButton && priceId && (
         <form action={checkoutAction}>
           <input type="hidden" name="priceId" value={priceId} />
           <SubmitButton />
         </form>
       )}
-      {isFree && (
+      
+      {showCurrentPlanButton && (
         <Button
           disabled
           variant="outline"
           className="w-full rounded-full"
         >
           Current Plan
+        </Button>
+      )}
+      
+      {isFree && !isCurrentPlan && userSubscription === 'plus' && (
+        <Button
+          disabled
+          variant="outline"
+          className="w-full rounded-full"
+        >
+          Previous Plan
         </Button>
       )}
     </div>

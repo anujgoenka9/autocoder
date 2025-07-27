@@ -61,6 +61,42 @@ function UserProfile() {
   );
 }
 
+function SubscriptionCard() {
+  const { data: userData } = useSWR<User>('/api/user', fetcher);
+
+  const planName = userData?.subscriptionPlan === 'plus' ? 'Plus' : 'Base';
+  const isActive = userData?.subscriptionStatus === 'active';
+  const canUpgrade = userData?.subscriptionPlan === 'base';
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Subscription</CardTitle>
+        <Calendar className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">
+          {planName} {userData?.subscriptionPlan === 'plus' && '($12/mo)'}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {isActive ? 'Active subscription' : userData?.subscriptionPlan === 'plus' ? 'Subscription status' : 'Free plan'}
+        </p>
+        {canUpgrade ? (
+          <Link href="/pricing">
+            <Button variant="outline" className="mt-3 w-full">
+              Upgrade Plan
+            </Button>
+          </Link>
+        ) : (
+          <Button variant="outline" className="mt-3 w-full" disabled>
+            Current Plan
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
   return (
     <div className="space-y-8">
@@ -109,23 +145,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Subscription</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">Free</div>
-            <p className="text-xs text-muted-foreground">
-              Current plan status
-            </p>
-            <Link href="/pricing">
-              <Button variant="outline" className="mt-3 w-full">
-                Upgrade Plan
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <SubscriptionCard />
       </div>
 
       <Card>
