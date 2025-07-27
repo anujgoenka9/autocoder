@@ -162,7 +162,6 @@ export async function signOut() {
     await logActivity(user.id, ActivityType.SIGN_OUT);
   }
   (await cookies()).delete('session');
-  redirect('/sign-in');
 }
 
 const updatePasswordSchema = z.object({

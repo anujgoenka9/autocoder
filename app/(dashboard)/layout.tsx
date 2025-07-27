@@ -25,7 +25,8 @@ function UserMenu() {
 
   async function handleSignOut() {
     await signOut();
-    mutate('/api/user');
+    // Clear the SWR cache and set user to null immediately
+    mutate('/api/user', null, false);
     router.push('/');
   }
 
