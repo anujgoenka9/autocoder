@@ -4,22 +4,7 @@ import { users, activityLogs, ActivityType } from './schema';
 import { hashPassword } from '@/lib/auth/session';
 
 async function createStripeProducts() {
-  console.log('Creating Stripe products and prices...');
-
-  const baseProduct = await stripe.products.create({
-    name: 'Base',
-    description: 'Base subscription plan',
-  });
-
-  await stripe.prices.create({
-    product: baseProduct.id,
-    unit_amount: 800, // $8 in cents
-    currency: 'usd',
-    recurring: {
-      interval: 'month',
-      trial_period_days: 7,
-    },
-  });
+  console.log('Creating Stripe product and price...');
 
   const plusProduct = await stripe.products.create({
     name: 'Plus',
