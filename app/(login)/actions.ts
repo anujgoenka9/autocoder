@@ -89,7 +89,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     redirect(`/${redirectTo}`);
   }
 
-  redirect('/dashboard');
+  redirect('/projects');
 });
 
 const signUpSchema = z.object({
@@ -153,7 +153,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     redirect(`/${redirectTo}`);
   }
 
-  redirect('/dashboard');
+  redirect('/projects');
 });
 
 export async function signOut() {

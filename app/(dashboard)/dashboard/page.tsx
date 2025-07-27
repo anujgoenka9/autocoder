@@ -12,7 +12,7 @@ import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 import Link from 'next/link';
-import { Calendar, User as UserIcon, Activity } from 'lucide-react';
+import { Calendar, User as UserIcon, Activity, FolderOpen } from 'lucide-react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -108,7 +108,7 @@ export default function DashboardPage() {
         <UserProfile />
       </Suspense>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Account</CardTitle>
@@ -140,6 +140,24 @@ export default function DashboardPage() {
             <Link href="/dashboard/activity">
               <Button variant="outline" className="mt-3 w-full">
                 View Activity
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Projects</CardTitle>
+            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">Workspace</div>
+            <p className="text-xs text-muted-foreground">
+              Build and manage your projects
+            </p>
+            <Link href="/projects">
+              <Button variant="outline" className="mt-3 w-full">
+                Open Projects
               </Button>
             </Link>
           </CardContent>
