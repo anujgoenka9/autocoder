@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, users, projects, messages, fragments } from './schema';
+import { activityLogs, users, projects, messages, fragments, type NewProject, type NewMessage, MessageRole, MessageType } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -100,4 +100,122 @@ export async function getProjectWithMessages(projectId: string) {
     project: project[0],
     messages: projectMessages
   };
+}
+
+export async function createProject(name: string) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const newProject: NewProject = {
+    name,
+    userId: user.id,
+  };
+
+  const [project] = await db.insert(projects).values(newProject).returning();
+  return project;
+}
+
+export async function getCurrentOrCreateProject() {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Get the most recent project
+  const recentProjects = await db
+    .select()
+    .from(projects)
+    .where(eq(projects.userId, user.id))
+    .orderBy(desc(projects.createdAt))
+    .limit(1);
+
+  if (recentProjects.length > 0) {
+    return recentProjects[0];
+  }
+
+  // Create a new project if none exists
+  return createProject('New Project');
+}
+
+export async function saveMessage(projectId: string, content: string, role: MessageRole, type: MessageType = MessageType.RESULT) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Verify user owns the project before saving message
+  const project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found or access denied');
+  }
+
+  const newMessage: NewMessage = {
+    content,
+    role,
+    type,
+    projectId,
+  };
+
+  const [message] = await db.insert(messages).values(newMessage).returning();
+  return message;
+}
+
+export async function getProjectMessages(projectId: string) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Verify user owns the project
+  const project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found or access denied');
+  }
+
+  return await db
+    .select()
+    .from(messages)
+    .where(eq(messages.projectId, projectId))
+    .orderBy(messages.createdAt);
+}
+
+export async function updateProjectName(projectId: string, newName: string) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Verify user owns the project before updating
+  const project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found or access denied');
+  }
+
+  const [updatedProject] = await db
+    .update(projects)
+    .set({ 
+      name: newName.trim(),
+      updatedAt: new Date()
+    })
+    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)))
+    .returning();
+
+  return updatedProject;
 }

@@ -6,6 +6,7 @@ import DashboardLayout from '@/app/(dashboard)/layout';
 import ChatInterface from '@/components/ChatInterface';
 import PreviewPanel from '@/components/PreviewPanel';
 import ResizeHandle from '@/components/ResizeHandle';
+import Header from '@/components/Header';
 
 export default function ProjectsLayout({
   children,
@@ -19,6 +20,7 @@ export default function ProjectsLayout({
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* <DashboardLayout>{children}</DashboardLayout> */}
+      <Header />
       <div className="flex-1 flex overflow-hidden">
         {/* Chat Panel */}
         <div 

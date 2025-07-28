@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, Edit3, Check, X } from 'lucide-react';
+import { initializeChat, sendChatMessage, updateProjectNameAction } from '@/app/api/chat/actions';
 
 interface Message {
   id: string;
@@ -20,33 +21,46 @@ interface ChatInterfaceProps {
 const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
   const messageIdCounter = useRef(0);
   const hasProcessedInitialPrompt = useRef(false);
+  const currentProjectId = useRef<string | null>(null);
+  const editInputRef = useRef<HTMLInputElement>(null);
   
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'initial-ai-message',
-      content: 'Hello! I\'m your AI development assistant. I can help you build and modify web applications. What would you like to create today?',
-      type: 'ai',
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-
-  const mockAiResponses = [
-    "I'll create that component for you right away! Let me update the code...",
-    "Great idea! I'll implement that feature with a modern design.",
-    "Perfect! I'll add those styles and make it responsive.",
-    "Absolutely! Let me build that interface with beautiful animations."
-  ];
+  const [isLoading, setIsLoading] = useState(true);
+  const [projectName, setProjectName] = useState('');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editingName, setEditingName] = useState('');
+  const [isUpdatingName, setIsUpdatingName] = useState(false);
 
   const generateMessageId = () => {
     messageIdCounter.current += 1;
     return `message-${messageIdCounter.current}-${Date.now()}`;
   };
 
-  // Handle initial prompt
+  // Load existing messages on component mount
   useEffect(() => {
-    if (initialPrompt && !hasProcessedInitialPrompt.current) {
+    const loadChatHistory = async () => {
+      try {
+        const result = await initializeChat();
+        if (result.success && result.messages) {
+          setMessages(result.messages);
+          currentProjectId.current = result.project?.id || null;
+          setProjectName(result.project?.name || 'New Project');
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadChatHistory();
+  }, []);
+
+  // Handle initial prompt only if there are no existing messages
+  useEffect(() => {
+    if (initialPrompt && !hasProcessedInitialPrompt.current && !isLoading && messages.length === 0) {
       hasProcessedInitialPrompt.current = true;
       setInput(initialPrompt);
       
@@ -55,39 +69,124 @@ const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
         sendMessage(initialPrompt);
       }, 500);
     }
-  }, [initialPrompt]);
+  }, [initialPrompt, isLoading, messages.length]);
+
+  // Focus edit input when editing starts
+  useEffect(() => {
+    if (isEditingName && editInputRef.current) {
+      editInputRef.current.focus();
+      editInputRef.current.select();
+    }
+  }, [isEditingName]);
+
+  const startEditingName = () => {
+    setEditingName(projectName);
+    setIsEditingName(true);
+  };
+
+  const cancelEditingName = () => {
+    setIsEditingName(false);
+    setEditingName('');
+  };
+
+  const saveProjectName = async () => {
+    if (!editingName.trim() || !currentProjectId.current) {
+      cancelEditingName();
+      return;
+    }
+
+    setIsUpdatingName(true);
+    try {
+      const result = await updateProjectNameAction(currentProjectId.current, editingName.trim());
+      
+      if (result.success) {
+        setProjectName(editingName.trim());
+        setIsEditingName(false);
+        setEditingName('');
+      } else {
+        console.error('Failed to update project name:', result.error);
+        // You could show an error toast here
+      }
+    } catch (error) {
+      console.error('Error updating project name:', error);
+    } finally {
+      setIsUpdatingName(false);
+    }
+  };
+
+  const handleNameKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      saveProjectName();
+    } else if (e.key === 'Escape') {
+      cancelEditingName();
+    }
+  };
 
   const sendMessage = async (messageContent: string) => {
-    if (!messageContent.trim()) return;
+    if (!messageContent.trim() || isTyping) return;
 
-    // Add user message
-    const userMessage: Message = {
+    // Add user message immediately to UI
+    const tempUserMessage: Message = {
       id: generateMessageId(),
       content: messageContent,
       type: 'user',
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => [...prev, tempUserMessage]);
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: generateMessageId(),
-        content: mockAiResponses[Math.floor(Math.random() * mockAiResponses.length)],
-        type: 'ai',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiResponse]);
+    try {
+      const result = await sendChatMessage(messageContent, currentProjectId.current || undefined);
+      
+      if (result.success) {
+        // Update project ID if this was the first message
+        if (!currentProjectId.current && result.projectId) {
+          currentProjectId.current = result.projectId;
+          // Update project name if this was the first message
+          if (messages.length === 0) {
+            const newName = messageContent.length > 50 ? messageContent.substring(0, 47) + '...' : messageContent;
+            setProjectName(newName);
+          }
+        }
+
+        // Replace temp user message with real one and add AI response
+        setMessages(prev => {
+          const withoutTemp = prev.filter(msg => msg.id !== tempUserMessage.id);
+          return [
+            ...withoutTemp,
+            result.userMessage!,
+            result.aiMessage!
+          ];
+        });
+      } else {
+        // Remove temp message and show error
+        setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
+        console.error('Failed to send message:', result.error);
+      }
+    } catch (error) {
+      // Remove temp message on error
+      setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
+      console.error('Error sending message:', error);
+    } finally {
       setIsTyping(false);
-    }, 1500);
+    }
   };
 
   const handleSendMessage = async () => {
     sendMessage(input);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full bg-gradient-chat">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-muted-foreground">Loading chat history...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full bg-gradient-chat">
@@ -97,9 +196,50 @@ const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
           <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
             <Bot className="w-4 h-4 text-white" />
           </div>
-          <div>
-            <h2 className="font-semibold text-foreground">AI Assistant</h2>
-            <p className="text-sm text-muted-foreground">Ready to help you build</p>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              {isEditingName ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <Input
+                    ref={editInputRef}
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={handleNameKeyPress}
+                    onBlur={saveProjectName}
+                    className="font-semibold text-foreground bg-transparent border-none h-6 p-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    disabled={isUpdatingName}
+                  />
+                  <div className="flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={saveProjectName}
+                      disabled={isUpdatingName}
+                    >
+                      <Check className="w-3 h-3 text-green-600" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0"
+                      onClick={cancelEditingName}
+                      disabled={isUpdatingName}
+                    >
+                      <X className="w-3 h-3 text-red-600" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div 
+                  className="flex items-center gap-2 cursor-pointer group flex-1"
+                  onClick={startEditingName}
+                >
+                  <h2 className="font-semibold text-foreground">{projectName}</h2>
+                  <Edit3 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -134,7 +274,7 @@ const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
                   {message.content}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {message.timestamp.toLocaleTimeString()}
+                  {new Date(message.timestamp).toLocaleTimeString()}
                 </p>
               </div>
             </div>
@@ -166,6 +306,7 @@ const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
             onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
             placeholder="Describe what you want to build..."
             className="flex-1 bg-chat-ai border-chat-border"
+            disabled={isTyping}
           />
           <Button 
             onClick={handleSendMessage}
