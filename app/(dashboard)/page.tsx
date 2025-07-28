@@ -3,12 +3,18 @@
 import { Plus, FolderOpen, Zap, Code, Palette, Smartphone, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SuggestionChat from '@/components/SuggestionChat';
 import ProjectCard from '@/components/ProjectCard';
 import NewProjectCard from '@/components/NewProjectCard';
 import { getRecentProjects, getAllProjects } from '@/app/api/projects/actions';
+import { createNewProject } from '@/app/api/chat/actions';
+import useSWR from 'swr';
+import { User } from '@/lib/db/schema';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 interface Project {
   id: string;
@@ -24,10 +30,21 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAllProjects, setShowAllProjects] = useState(false);
   const [isLoadingAll, setIsLoadingAll] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
   const projectsRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  
+  // Check if user is authenticated
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const isAuthenticated = !!user;
 
   useEffect(() => {
     const loadRecentProjects = async () => {
+      if (!isAuthenticated) {
+        setIsLoading(false);
+        return;
+      }
+      
       try {
         const result = await getRecentProjects(3);
         if (result.success) {
@@ -40,8 +57,10 @@ export default function HomePage() {
       }
     };
 
-    loadRecentProjects();
-  }, []);
+    if (user !== undefined) { // Wait for auth check to complete
+      loadRecentProjects();
+    }
+  }, [isAuthenticated, user]);
 
   const handleViewAllProjects = async () => {
     if (showAllProjects) {
@@ -83,6 +102,31 @@ export default function HomePage() {
     }
   };
 
+  // Handle Get Started button click
+  const handleGetStarted = async () => {
+    if (!isAuthenticated) {
+      // Store intent to create project after login
+      localStorage.setItem('postLoginAction', 'createProject');
+      router.push('/sign-in');
+      return;
+    }
+
+    // User is authenticated, create project directly
+    setIsCreatingProject(true);
+    try {
+      const result = await createNewProject();
+      if (result.success && result.projectId) {
+        router.push(`/projects/${result.projectId}`);
+      } else {
+        console.error('Failed to create new project:', result.error);
+      }
+    } catch (error) {
+      console.error('Error creating new project:', error);
+    } finally {
+      setIsCreatingProject(false);
+    }
+  };
+
   // Expose function globally for navigation
   useEffect(() => {
     (window as any).scrollToProjects = scrollToAndExpandProjects;
@@ -91,28 +135,11 @@ export default function HomePage() {
     };
   }, [showAllProjects]);
 
-  const features = [
-    {
-      icon: Code,
-      title: "AI-Powered Development",
-      description: "Build web applications with natural language instructions"
-    },
-    {
-      icon: Zap,
-      title: "Lightning Fast",
-      description: "See your changes in real-time with instant preview"
-    },
-    {
-      icon: Palette,
-      title: "Beautiful Designs",
-      description: "Modern, responsive designs built with Tailwind CSS"
-    },
-    {
-      icon: Smartphone,
-      title: "Mobile Ready",
-      description: "All projects are optimized for mobile devices"
-    }
-  ];
+  const handleProjectDelete = (deletedProjectId: string) => {
+    // Remove the deleted project from both recent and all projects lists
+    setRecentProjects(prev => prev.filter(project => project.id !== deletedProjectId));
+    setAllProjects(prev => prev.filter(project => project.id !== deletedProjectId));
+  };
 
   const displayProjects = showAllProjects ? allProjects : recentProjects;
 
@@ -131,10 +158,11 @@ export default function HomePage() {
           <Button 
             size="lg" 
             className="bg-gradient-primary hover:opacity-90 text-white"
-            onClick={scrollToAndExpandProjects}
+            onClick={handleGetStarted}
+            disabled={isCreatingProject}
           >
             <Zap className="w-5 h-5 mr-2" />
-            Get Started
+            {isCreatingProject ? 'Creating Project...' : isAuthenticated ? 'Get Started' : 'Sign in to get started'}
           </Button>
         </div>
 
@@ -143,102 +171,106 @@ export default function HomePage() {
           <SuggestionChat />
         </div>
 
-        {/* Recent/All Projects */}
-        <div className="mb-8" ref={projectsRef}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-semibold text-foreground">
-              {showAllProjects ? 'All Projects' : 'Recent Projects'}
-              {showAllProjects && (
-                <span className="text-sm font-normal text-muted-foreground ml-2">
-                  ({allProjects.length} total)
-                </span>
-              )}
-            </h2>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="border-border hover:bg-accent"
-              onClick={handleViewAllProjects}
-              disabled={isLoadingAll}
-            >
-              {showAllProjects ? (
-                <>
-                  <ChevronUp className="w-4 h-4 mr-2" />
-                  Show Less
-                </>
-              ) : (
-                <>
-                  <FolderOpen className="w-4 h-4 mr-2" />
-                  {isLoadingAll ? 'Loading...' : 'View All'}
-                </>
-              )}
-            </Button>
+        {/* Recent/All Projects - Only show if authenticated */}
+        {isAuthenticated && (
+          <div className="mb-8" ref={projectsRef}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-semibold text-foreground">
+                {showAllProjects ? 'All Projects' : 'Recent Projects'}
+                {showAllProjects && (
+                  <span className="text-sm font-normal text-muted-foreground ml-2">
+                    ({allProjects.length} total)
+                  </span>
+                )}
+              </h2>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="border-border hover:bg-accent"
+                onClick={handleViewAllProjects}
+                disabled={isLoadingAll}
+              >
+                {showAllProjects ? (
+                  <>
+                    <ChevronUp className="w-4 h-4 mr-2" />
+                    Show Less
+                  </>
+                ) : (
+                  <>
+                    <FolderOpen className="w-4 h-4 mr-2" />
+                    {isLoadingAll ? 'Loading...' : 'View All'}
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {isLoading ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="animate-pulse bg-card border-border">
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-muted rounded-lg" />
+                        <div className="flex-1">
+                          <div className="h-4 bg-muted rounded mb-2" />
+                          <div className="h-3 bg-muted rounded w-1/2" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            ) : isLoadingAll ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <Card key={i} className="animate-pulse bg-card border-border">
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-muted rounded-lg" />
+                        <div className="flex-1">
+                          <div className="h-4 bg-muted rounded mb-2" />
+                          <div className="h-3 bg-muted rounded w-1/2" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            ) : displayProjects.length > 0 ? (
+              <div className={`grid md:grid-cols-2 lg:grid-cols-3 ${showAllProjects ? 'xl:grid-cols-4' : ''} gap-6`}>
+                {/* New Project Card - Show when viewing all projects */}
+                {showAllProjects && <NewProjectCard />}
+                
+                {/* Projects */}
+                {displayProjects.map((project) => (
+                  <ProjectCard
+                    key={project.id}
+                    id={project.id}
+                    name={project.name}
+                    lastModified={project.lastModified}
+                    showDelete={showAllProjects}
+                    onDelete={handleProjectDelete}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card className="text-center py-12 bg-card border-border">
+                <CardContent>
+                  <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Plus className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <CardTitle className="mb-2 text-card-foreground">No projects yet</CardTitle>
+                  <p className="text-muted-foreground mb-4">
+                    Create your first project to get started
+                  </p>
+                  <div className="max-w-sm mx-auto">
+                    <NewProjectCard />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
-          
-          {isLoading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="animate-pulse bg-card border-border">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-muted rounded-lg" />
-                      <div className="flex-1">
-                        <div className="h-4 bg-muted rounded mb-2" />
-                        <div className="h-3 bg-muted rounded w-1/2" />
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          ) : isLoadingAll ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                <Card key={i} className="animate-pulse bg-card border-border">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-muted rounded-lg" />
-                      <div className="flex-1">
-                        <div className="h-4 bg-muted rounded mb-2" />
-                        <div className="h-3 bg-muted rounded w-1/2" />
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          ) : displayProjects.length > 0 ? (
-            <div className={`grid md:grid-cols-2 lg:grid-cols-3 ${showAllProjects ? 'xl:grid-cols-4' : ''} gap-6`}>
-              {/* New Project Card - Show when viewing all projects */}
-              {showAllProjects && <NewProjectCard />}
-              
-              {/* Projects */}
-              {displayProjects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  id={project.id}
-                  name={project.name}
-                  lastModified={project.lastModified}
-                />
-              ))}
-            </div>
-          ) : (
-            <Card className="text-center py-12 bg-card border-border">
-              <CardContent>
-                <div className="w-16 h-16 bg-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plus className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <CardTitle className="mb-2 text-card-foreground">No projects yet</CardTitle>
-                <p className="text-muted-foreground mb-4">
-                  Create your first project to get started
-                </p>
-                <div className="max-w-sm mx-auto">
-                  <NewProjectCard />
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+        )}
       </div>
     </main>
   );

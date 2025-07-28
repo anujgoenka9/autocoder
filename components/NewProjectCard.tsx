@@ -5,12 +5,27 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus } from 'lucide-react';
 import { createNewProject } from '@/app/api/chat/actions';
+import useSWR from 'swr';
+import { User } from '@/lib/db/schema';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const NewProjectCard = () => {
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
+  
+  // Check if user is authenticated
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const isAuthenticated = !!user;
 
   const handleCreateProject = async () => {
+    if (!isAuthenticated) {
+      // Store intent to create project after login
+      localStorage.setItem('postLoginAction', 'createProject');
+      router.push('/sign-in');
+      return;
+    }
+
     setIsCreating(true);
     try {
       const result = await createNewProject();
@@ -41,7 +56,7 @@ const NewProjectCard = () => {
               {isCreating ? 'Creating...' : 'Start New Project'}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {isCreating ? 'Setting up your workspace' : 'Create a new application'}
+              {isCreating ? 'Setting up your workspace' : isAuthenticated ? 'Create a new application' : 'Sign in to get started'}
             </p>
           </div>
         </div>

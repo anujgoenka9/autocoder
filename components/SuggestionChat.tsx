@@ -8,11 +8,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, Lightbulb, Sparkles } from 'lucide-react';
 import { createNewProject, sendChatMessage } from '@/app/api/chat/actions';
+import useSWR from 'swr';
+import { User } from '@/lib/db/schema';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 const SuggestionChat = () => {
   const [input, setInput] = useState('');
   const [isStartingProject, setIsStartingProject] = useState(false);
   const router = useRouter();
+  
+  // Check if user is authenticated
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const isAuthenticated = !!user;
 
   const suggestions = [
     "Create a modern e-commerce website with product catalog",
@@ -31,6 +39,14 @@ const SuggestionChat = () => {
 
   const handleStartBuilding = async () => {
     if (!input.trim()) return;
+    
+    if (!isAuthenticated) {
+      // Store the prompt and intent to create project after login
+      localStorage.setItem('postLoginAction', 'createProject');
+      localStorage.setItem('postLoginPrompt', input.trim());
+      router.push('/sign-in');
+      return;
+    }
     
     setIsStartingProject(true);
     try {

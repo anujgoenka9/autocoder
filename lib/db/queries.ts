@@ -239,3 +239,28 @@ export async function getProjectById(projectId: string) {
 
   return project[0];
 }
+
+export async function deleteProject(projectId: string) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Verify user owns the project before deleting
+  const project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found or access denied');
+  }
+
+  // Delete the project (cascading delete will handle messages and fragments)
+  await db
+    .delete(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)));
+
+  return { success: true };
+}

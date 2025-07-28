@@ -1,6 +1,6 @@
 'use server';
 
-import { getUserProjects } from '@/lib/db/queries';
+import { getUserProjects, deleteProject } from '@/lib/db/queries';
 
 export async function getRecentProjects(limit: number = 3) {
   try {
@@ -47,6 +47,23 @@ export async function getAllProjects() {
       success: false,
       error: 'Failed to fetch projects',
       projects: []
+    };
+  }
+}
+
+export async function deleteProjectAction(projectId: string) {
+  try {
+    await deleteProject(projectId);
+    
+    return {
+      success: true,
+      message: 'Project deleted successfully'
+    };
+  } catch (error) {
+    console.error('Failed to delete project:', error);
+    return {
+      success: false,
+      error: 'Failed to delete project'
     };
   }
 }
