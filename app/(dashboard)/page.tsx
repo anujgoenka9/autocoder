@@ -1,17 +1,95 @@
 'use client'
 
-import { Plus, FolderOpen, Zap, Code, Palette, Smartphone } from 'lucide-react';
+import { Plus, FolderOpen, Zap, Code, Palette, Smartphone, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SuggestionChat from '@/components/SuggestionChat';
+import ProjectCard from '@/components/ProjectCard';
+import NewProjectCard from '@/components/NewProjectCard';
+import { getRecentProjects, getAllProjects } from '@/app/api/projects/actions';
+
+interface Project {
+  id: string;
+  name: string;
+  lastModified: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export default function HomePage() {
-  const recentProjects = [
-    { id: 1, name: "E-commerce Store", lastModified: "2 hours ago" },
-    { id: 2, name: "Portfolio Website", lastModified: "1 day ago" },
-    { id: 3, name: "Task Manager App", lastModified: "3 days ago" },
-  ];
+  const [recentProjects, setRecentProjects] = useState<Project[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showAllProjects, setShowAllProjects] = useState(false);
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
+  const projectsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const loadRecentProjects = async () => {
+      try {
+        const result = await getRecentProjects(3);
+        if (result.success) {
+          setRecentProjects(result.projects);
+        }
+      } catch (error) {
+        console.error('Failed to load recent projects:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRecentProjects();
+  }, []);
+
+  const handleViewAllProjects = async () => {
+    if (showAllProjects) {
+      setShowAllProjects(false);
+      return;
+    }
+
+    setIsLoadingAll(true);
+    try {
+      const result = await getAllProjects();
+      if (result.success) {
+        setAllProjects(result.projects);
+        setShowAllProjects(true);
+        
+        // Scroll to projects section
+        setTimeout(() => {
+          projectsRef.current?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }, 100);
+      }
+    } catch (error) {
+      console.error('Failed to load all projects:', error);
+    } finally {
+      setIsLoadingAll(false);
+    }
+  };
+
+  // Function to be called from navigation
+  const scrollToAndExpandProjects = async () => {
+    if (!showAllProjects) {
+      await handleViewAllProjects();
+    } else {
+      projectsRef.current?.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'start' 
+      });
+    }
+  };
+
+  // Expose function globally for navigation
+  useEffect(() => {
+    (window as any).scrollToProjects = scrollToAndExpandProjects;
+    return () => {
+      delete (window as any).scrollToProjects;
+    };
+  }, [showAllProjects]);
 
   const features = [
     {
@@ -36,6 +114,8 @@ export default function HomePage() {
     }
   ];
 
+  const displayProjects = showAllProjects ? allProjects : recentProjects;
+
   return (
     <main className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -48,12 +128,14 @@ export default function HomePage() {
             Transform your ideas into beautiful, functional web applications using the power of AI. 
             No coding experience required.
           </p>
-          <Link href="/projects">
-            <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-white">
-              <Zap className="w-5 h-5 mr-2" />
-              Get Started
-            </Button>
-          </Link>
+          <Button 
+            size="lg" 
+            className="bg-gradient-primary hover:opacity-90 text-white"
+            onClick={scrollToAndExpandProjects}
+          >
+            <Zap className="w-5 h-5 mr-2" />
+            Get Started
+          </Button>
         </div>
 
         {/* AI Suggestion Chat */}
@@ -61,36 +143,83 @@ export default function HomePage() {
           <SuggestionChat />
         </div>
 
-
-
-        {/* Recent Projects */}
-        <div className="mb-8">
+        {/* Recent/All Projects */}
+        <div className="mb-8" ref={projectsRef}>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-semibold text-foreground">Recent Projects</h2>
-            <Link href="/projects">
-              <Button variant="outline" size="sm" className="border-border hover:bg-accent">
-                <FolderOpen className="w-4 h-4 mr-2" />
-                View All
-              </Button>
-            </Link>
+            <h2 className="text-2xl font-semibold text-foreground">
+              {showAllProjects ? 'All Projects' : 'Recent Projects'}
+              {showAllProjects && (
+                <span className="text-sm font-normal text-muted-foreground ml-2">
+                  ({allProjects.length} total)
+                </span>
+              )}
+            </h2>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="border-border hover:bg-accent"
+              onClick={handleViewAllProjects}
+              disabled={isLoadingAll}
+            >
+              {showAllProjects ? (
+                <>
+                  <ChevronUp className="w-4 h-4 mr-2" />
+                  Show Less
+                </>
+              ) : (
+                <>
+                  <FolderOpen className="w-4 h-4 mr-2" />
+                  {isLoadingAll ? 'Loading...' : 'View All'}
+                </>
+              )}
+            </Button>
           </div>
           
-          {recentProjects.length > 0 ? (
+          {isLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {recentProjects.map((project) => (
-                <Card key={project.id} className="group cursor-pointer hover:shadow-lg transition-shadow duration-300 bg-card border-border">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse bg-card border-border">
                   <CardHeader>
-                    <div className="aspect-video bg-secondary rounded-lg mb-4 flex items-center justify-center">
-                      <Code className="w-8 h-8 text-muted-foreground" />
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-muted rounded-lg" />
+                      <div className="flex-1">
+                        <div className="h-4 bg-muted rounded mb-2" />
+                        <div className="h-3 bg-muted rounded w-1/2" />
+                      </div>
                     </div>
-                    <CardTitle className="text-lg group-hover:text-ai-primary transition-colors text-card-foreground">
-                      {project.name}
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground">
-                      Last modified {project.lastModified}
-                    </p>
                   </CardHeader>
                 </Card>
+              ))}
+            </div>
+          ) : isLoadingAll ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                <Card key={i} className="animate-pulse bg-card border-border">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-muted rounded-lg" />
+                      <div className="flex-1">
+                        <div className="h-4 bg-muted rounded mb-2" />
+                        <div className="h-3 bg-muted rounded w-1/2" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          ) : displayProjects.length > 0 ? (
+            <div className={`grid md:grid-cols-2 lg:grid-cols-3 ${showAllProjects ? 'xl:grid-cols-4' : ''} gap-6`}>
+              {/* New Project Card - Show when viewing all projects */}
+              {showAllProjects && <NewProjectCard />}
+              
+              {/* Projects */}
+              {displayProjects.map((project) => (
+                <ProjectCard
+                  key={project.id}
+                  id={project.id}
+                  name={project.name}
+                  lastModified={project.lastModified}
+                />
               ))}
             </div>
           ) : (
@@ -103,60 +232,13 @@ export default function HomePage() {
                 <p className="text-muted-foreground mb-4">
                   Create your first project to get started
                 </p>
-                <Link href="/projects">
-                  <Button className="bg-gradient-primary hover:opacity-90 text-white">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Project
-                  </Button>
-                </Link>
+                <div className="max-w-sm mx-auto">
+                  <NewProjectCard />
+                </div>
               </CardContent>
             </Card>
           )}
         </div>
-
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {features.map((feature, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow duration-300 bg-card border-border">
-              <CardHeader className="text-center">
-                <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mx-auto mb-4">
-                  <feature.icon className="w-6 h-6 text-white" />
-                </div>
-                <CardTitle className="text-lg text-card-foreground">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center text-muted-foreground">
-                  {feature.description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Call to Action */}
-        <section className="py-16 bg-card rounded-lg shadow-sm border border-border">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold text-card-foreground mb-4">
-              Ready to start building?
-            </h2>
-            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Join thousands of creators who are already building amazing web applications 
-              with our AI-powered platform.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/pricing">
-                <Button size="lg" variant="outline" className="rounded-full border-border hover:bg-accent">
-                  View Pricing
-                </Button>
-              </Link>
-              <Link href="/projects">
-                <Button size="lg" className="bg-gradient-primary hover:opacity-90 text-white rounded-full">
-                  Start Building
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
       </div>
     </main>
   );

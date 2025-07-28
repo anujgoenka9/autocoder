@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, User, Edit3, Check, X } from 'lucide-react';
-import { initializeChat, sendChatMessage, updateProjectNameAction } from '@/app/api/chat/actions';
+import { initializeChat, sendChatMessage, updateProjectNameAction, loadProjectById } from '@/app/api/chat/actions';
 
 interface Message {
   id: string;
@@ -15,14 +16,14 @@ interface Message {
 }
 
 interface ChatInterfaceProps {
-  initialPrompt?: string;
+  projectId?: string;
 }
 
-const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
+const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
   const messageIdCounter = useRef(0);
-  const hasProcessedInitialPrompt = useRef(false);
   const currentProjectId = useRef<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -41,11 +42,19 @@ const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
   // Load existing messages on component mount
   useEffect(() => {
     const loadChatHistory = async () => {
+      if (!projectId) {
+        // No project ID provided, let the main projects page handle the redirect
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const result = await initializeChat();
+        // Load specific project
+        const result = await loadProjectById(projectId);
+        currentProjectId.current = projectId;
+        
         if (result.success && result.messages) {
           setMessages(result.messages);
-          currentProjectId.current = result.project?.id || null;
           setProjectName(result.project?.name || 'New Project');
         }
       } catch (error) {
@@ -56,20 +65,7 @@ const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
     };
 
     loadChatHistory();
-  }, []);
-
-  // Handle initial prompt only if there are no existing messages
-  useEffect(() => {
-    if (initialPrompt && !hasProcessedInitialPrompt.current && !isLoading && messages.length === 0) {
-      hasProcessedInitialPrompt.current = true;
-      setInput(initialPrompt);
-      
-      // Auto-send the initial prompt
-      setTimeout(() => {
-        sendMessage(initialPrompt);
-      }, 500);
-    }
-  }, [initialPrompt, isLoading, messages.length]);
+  }, [projectId, router]);
 
   // Focus edit input when editing starts
   useEffect(() => {
@@ -105,7 +101,6 @@ const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
         setEditingName('');
       } else {
         console.error('Failed to update project name:', result.error);
-        // You could show an error toast here
       }
     } catch (error) {
       console.error('Error updating project name:', error);
@@ -144,6 +139,8 @@ const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
         // Update project ID if this was the first message
         if (!currentProjectId.current && result.projectId) {
           currentProjectId.current = result.projectId;
+          // Redirect to the new project's route
+          router.replace(`/projects/${result.projectId}`);
           // Update project name if this was the first message
           if (messages.length === 0) {
             const newName = messageContent.length > 50 ? messageContent.substring(0, 47) + '...' : messageContent;
@@ -183,6 +180,16 @@ const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
       <div className="flex flex-col h-full bg-gradient-chat">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-muted-foreground">Loading chat history...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!projectId) {
+    return (
+      <div className="flex flex-col h-full bg-gradient-chat">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-muted-foreground">Loading project...</div>
         </div>
       </div>
     );

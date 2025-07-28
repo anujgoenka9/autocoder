@@ -48,12 +48,18 @@ function UserMenu() {
 
   return (
     <>
-      <Link href="/projects">
-        <Button variant="outline" className="rounded-full border-border hover:bg-accent">
-          <FolderOpen className="w-4 h-4 mr-2" />
-          Projects
-        </Button>
-      </Link>
+      <Button 
+        variant="outline" 
+        className="rounded-full border-border hover:bg-accent"
+        onClick={() => {
+          if (typeof window !== 'undefined' && (window as any).scrollToProjects) {
+            (window as any).scrollToProjects();
+          }
+        }}
+      >
+        <FolderOpen className="w-4 h-4 mr-2" />
+        Projects
+      </Button>
       <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger>
           <Avatar className="cursor-pointer size-9">

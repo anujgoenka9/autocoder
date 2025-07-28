@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentOrCreateProject, saveMessage, getProjectMessages, createProject, updateProjectName } from '@/lib/db/queries';
+import { getCurrentOrCreateProject, saveMessage, getProjectMessages, createProject, updateProjectName, getProjectById } from '@/lib/db/queries';
 import { MessageRole, MessageType } from '@/lib/db/schema';
 
 export async function initializeChat() {
@@ -103,6 +103,50 @@ export async function updateProjectNameAction(projectId: string, newName: string
     return {
       success: false,
       error: 'Failed to update project name',
+    };
+  }
+}
+
+export async function createNewProject() {
+  try {
+    const project = await createProject('New Project');
+    
+    return {
+      success: true,
+      projectId: project.id,
+      project,
+    };
+  } catch (error) {
+    console.error('Failed to create new project:', error);
+    return {
+      success: false,
+      error: 'Failed to create new project',
+    };
+  }
+}
+
+export async function loadProjectById(projectId: string) {
+  try {
+    const project = await getProjectById(projectId);
+    const messages = await getProjectMessages(projectId);
+    
+    return {
+      success: true,
+      project,
+      messages: messages.map(msg => ({
+        id: msg.id,
+        content: msg.content,
+        type: msg.role.toLowerCase() as 'user' | 'ai',
+        timestamp: msg.createdAt,
+      })),
+    };
+  } catch (error) {
+    console.error('Failed to load project:', error);
+    return {
+      success: false,
+      error: 'Failed to load project',
+      project: null,
+      messages: [],
     };
   }
 } 

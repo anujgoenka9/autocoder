@@ -1,7 +1,7 @@
 'use client';
 
 import { ReactNode, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import DashboardLayout from '@/app/(dashboard)/layout';
 import ChatInterface from '@/components/ChatInterface';
 import PreviewPanel from '@/components/PreviewPanel';
@@ -14,12 +14,11 @@ export default function ProjectsLayout({
   children: ReactNode;
 }) {
   const [chatWidth, setChatWidth] = useState(400);
-  const searchParams = useSearchParams();
-  const prompt = searchParams?.get('prompt');
+  const params = useParams();
+  const projectId = params?.projectId as string | undefined;
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* <DashboardLayout>{children}</DashboardLayout> */}
       <Header />
       <div className="flex-1 flex overflow-hidden">
         {/* Chat Panel */}
@@ -27,7 +26,7 @@ export default function ProjectsLayout({
           className="border-r border-border"
           style={{ width: chatWidth }}
         >
-          <ChatInterface initialPrompt={prompt || undefined} />
+          <ChatInterface projectId={projectId} />
         </div>
         
         {/* Resize Handle */}

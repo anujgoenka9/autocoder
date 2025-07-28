@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, Lightbulb, Sparkles } from 'lucide-react';
+import { createNewProject, sendChatMessage } from '@/app/api/chat/actions';
 
 const SuggestionChat = () => {
   const [input, setInput] = useState('');
+  const [isStartingProject, setIsStartingProject] = useState(false);
   const router = useRouter();
 
   const suggestions = [
@@ -27,10 +29,28 @@ const SuggestionChat = () => {
     setInput(suggestion);
   };
 
-  const handleStartBuilding = () => {
-    // Navigate to projects with the input as a parameter
-    const encodedInput = encodeURIComponent(input);
-    router.push(`/projects?prompt=${encodedInput}`);
+  const handleStartBuilding = async () => {
+    if (!input.trim()) return;
+    
+    setIsStartingProject(true);
+    try {
+      // Create a new project
+      const projectResult = await createNewProject();
+      
+      if (projectResult.success && projectResult.projectId) {
+        // Send the initial message to the new project
+        await sendChatMessage(input.trim(), projectResult.projectId);
+        
+        // Navigate to the new project
+        router.push(`/projects/${projectResult.projectId}`);
+      } else {
+        console.error('Failed to create project:', projectResult.error);
+      }
+    } catch (error) {
+      console.error('Error starting project:', error);
+    } finally {
+      setIsStartingProject(false);
+    }
   };
 
   return (
@@ -79,6 +99,7 @@ const SuggestionChat = () => {
                   variant="outline"
                   className="justify-start text-left h-auto p-3 border-chat-border bg-chat-ai hover:bg-chat-user/10 transition-colors"
                   onClick={() => handleSuggestionClick(suggestion)}
+                  disabled={isStartingProject}
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-primary shrink-0" />
@@ -96,16 +117,18 @@ const SuggestionChat = () => {
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleStartBuilding()}
               placeholder="Or describe your own app idea..."
               className="flex-1 bg-chat-ai border-chat-border"
+              disabled={isStartingProject}
             />
             <Button 
               onClick={handleStartBuilding}
-              disabled={!input.trim()}
+              disabled={!input.trim() || isStartingProject}
               className="bg-gradient-primary hover:opacity-90"
             >
               <Send className="w-4 h-4 mr-2" />
-              Start Building
+              {isStartingProject ? 'Starting...' : 'Start Building'}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground text-center">

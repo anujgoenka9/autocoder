@@ -219,3 +219,23 @@ export async function updateProjectName(projectId: string, newName: string) {
 
   return updatedProject;
 }
+
+export async function getProjectById(projectId: string) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Get project details and verify ownership
+  const project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found or access denied');
+  }
+
+  return project[0];
+}
