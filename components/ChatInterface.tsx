@@ -1,4 +1,6 @@
-import { useState } from 'react';
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -11,10 +13,17 @@ interface Message {
   timestamp: Date;
 }
 
-const ChatInterface = () => {
+interface ChatInterfaceProps {
+  initialPrompt?: string;
+}
+
+const ChatInterface = ({ initialPrompt }: ChatInterfaceProps) => {
+  const messageIdCounter = useRef(0);
+  const hasProcessedInitialPrompt = useRef(false);
+  
   const [messages, setMessages] = useState<Message[]>([
     {
-      id: '1',
+      id: 'initial-ai-message',
       content: 'Hello! I\'m your AI development assistant. I can help you build and modify web applications. What would you like to create today?',
       type: 'ai',
       timestamp: new Date()
@@ -30,13 +39,31 @@ const ChatInterface = () => {
     "Absolutely! Let me build that interface with beautiful animations."
   ];
 
-  const handleSendMessage = async () => {
-    if (!input.trim()) return;
+  const generateMessageId = () => {
+    messageIdCounter.current += 1;
+    return `message-${messageIdCounter.current}-${Date.now()}`;
+  };
+
+  // Handle initial prompt
+  useEffect(() => {
+    if (initialPrompt && !hasProcessedInitialPrompt.current) {
+      hasProcessedInitialPrompt.current = true;
+      setInput(initialPrompt);
+      
+      // Auto-send the initial prompt
+      setTimeout(() => {
+        sendMessage(initialPrompt);
+      }, 500);
+    }
+  }, [initialPrompt]);
+
+  const sendMessage = async (messageContent: string) => {
+    if (!messageContent.trim()) return;
 
     // Add user message
     const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input,
+      id: generateMessageId(),
+      content: messageContent,
       type: 'user',
       timestamp: new Date()
     };
@@ -48,7 +75,7 @@ const ChatInterface = () => {
     // Simulate AI response
     setTimeout(() => {
       const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
+        id: generateMessageId(),
         content: mockAiResponses[Math.floor(Math.random() * mockAiResponses.length)],
         type: 'ai',
         timestamp: new Date()
@@ -56,6 +83,10 @@ const ChatInterface = () => {
       setMessages(prev => [...prev, aiResponse]);
       setIsTyping(false);
     }, 1500);
+  };
+
+  const handleSendMessage = async () => {
+    sendMessage(input);
   };
 
   return (
@@ -94,9 +125,7 @@ const ChatInterface = () => {
                   <Bot className="w-4 h-4 text-white" />
                 )}
               </div>
-              <div className={`max-w-[80%] ${
-                message.type === 'user' ? 'text-right' : ''
-              }`}>
+              <div className="max-w-[80%]">
                 <div className={`rounded-lg p-3 ${
                   message.type === 'user'
                     ? 'bg-chat-user text-white'

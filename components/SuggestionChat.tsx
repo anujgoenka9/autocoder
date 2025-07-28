@@ -1,13 +1,16 @@
+'use client';
+
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, Lightbulb, Sparkles } from 'lucide-react';
-// import { Link } from 'react-router-dom';
 
 const SuggestionChat = () => {
   const [input, setInput] = useState('');
+  const router = useRouter();
 
   const suggestions = [
     "Create a modern e-commerce website with product catalog",
@@ -25,9 +28,9 @@ const SuggestionChat = () => {
   };
 
   const handleStartBuilding = () => {
-    // Navigate to editor with the input as a parameter
+    // Navigate to projects with the input as a parameter
     const encodedInput = encodeURIComponent(input);
-    window.location.href = `/editor?prompt=${encodedInput}`;
+    router.push(`/projects?prompt=${encodedInput}`);
   };
 
   return (
