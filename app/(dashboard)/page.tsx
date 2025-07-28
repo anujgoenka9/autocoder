@@ -157,7 +157,7 @@ export default function HomePage() {
           </p>
           <Button 
             size="lg" 
-            className="bg-gradient-primary hover:opacity-90 text-white"
+            className="bg-gradient-primary hover:opacity-90 text-white cursor-pointer"
             onClick={handleGetStarted}
             disabled={isCreatingProject}
           >
@@ -186,7 +186,7 @@ export default function HomePage() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="border-border hover:bg-accent"
+                className="border-border hover:bg-accent cursor-pointer"
                 onClick={handleViewAllProjects}
                 disabled={isLoadingAll}
               >

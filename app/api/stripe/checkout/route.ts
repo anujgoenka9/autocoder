@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
 
     await setSession(user[0]);
-    return NextResponse.redirect(new URL('/dashboard?payment=success', request.url));
+    return NextResponse.redirect(new URL('/account-settings?payment=success', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/pricing?error=checkout_failed', request.url));

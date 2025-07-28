@@ -51,7 +51,7 @@ function UserMenu() {
     <>
       <Button 
         variant="outline" 
-        className="rounded-full border-border hover:bg-accent"
+        className="rounded-full border-border hover:bg-accent cursor-pointer"
         onClick={() => {
           if (typeof window !== 'undefined' && (window as any).scrollToProjects) {
             (window as any).scrollToProjects();
@@ -74,10 +74,10 @@ function UserMenu() {
           </Avatar>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="flex flex-col gap-1">
-          <DropdownMenuItem className="cursor-pointer">
-            <Link href="/dashboard" className="flex w-full items-center">
+          <DropdownMenuItem className="cursor-pointer" onClick={() => setIsMenuOpen(false)}>
+            <Link href="/account-settings" className="flex w-full items-center">
               <Home className="mr-2 h-4 w-4" />
-              <span>Dashboard</span>
+              <span>Account Settings</span>
             </Link>
           </DropdownMenuItem>
           <form action={handleSignOut} className="w-full">

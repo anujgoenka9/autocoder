@@ -31,12 +31,12 @@ const PostLoginHandler = () => {
             router.replace(`/projects/${result.projectId}`);
           } else {
             console.error('Failed to create new project:', result.error);
-            // Fallback to dashboard
+            // Fallback to home page
             router.replace('/');
           }
         } catch (error) {
           console.error('Error creating new project:', error);
-          // Fallback to dashboard
+          // Fallback to home page
           router.replace('/');
         }
       }
