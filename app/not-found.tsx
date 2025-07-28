@@ -1,23 +1,23 @@
 import Link from 'next/link';
-import { HeartCrack } from 'lucide-react';
+import { HeartCrackIcon } from 'lucide-react';
 
 export default function NotFound() {
   return (
-    <div className="flex items-center justify-center min-h-[100dvh]">
-      <div className="max-w-md space-y-8 p-4 text-center">
+    <div className="flex items-center justify-center min-h-[100dvh] bg-background text-foreground">
+      <div className="max-w-md space-y-8 p-8 text-center bg-card rounded-lg shadow-lg">
         <div className="flex justify-center">
-          <HeartCrack className="size-12 text-red-500" />
+          <HeartCrackIcon className="size-12 text-ai-primary" />
         </div>
-        <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
+        <h1 className="text-4xl font-bold text-ai-primary tracking-tight">
           Page Not Found
         </h1>
-        <p className="text-base text-gray-500">
+        <p className="text-base text-muted-foreground">
           The page you are looking for might have been removed, had its name
           changed, or is temporarily unavailable.
         </p>
         <Link
           href="/"
-          className="max-w-48 mx-auto flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+          className="inline-flex justify-center py-3 px-6 border border-border rounded-full shadow-sm text-sm font-medium text-white bg-gradient-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ai-primary transition-all"
         >
           Back to Home
         </Link>

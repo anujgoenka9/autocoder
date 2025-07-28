@@ -15,7 +15,7 @@ export default function ProjectsLayout({
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <DashboardLayout>{children}</DashboardLayout>
+      {/* <DashboardLayout>{children}</DashboardLayout> */}
       <div className="flex-1 flex overflow-hidden">
         {/* Chat Panel */}
         <div 

@@ -19,8 +19,14 @@ export default async function PricingPage() {
   const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
 
   return (
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="grid md:grid-cols-2 gap-8 max-w-xl mx-auto">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-background">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-foreground mb-4">Choose Your Plan</h1>
+        <p className="text-lg text-muted-foreground">
+          Select the perfect plan for your needs
+        </p>
+      </div>
+      <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         <PricingCard
           name="Base"
           price={0}
@@ -77,9 +83,9 @@ function PricingCard({
   const showCurrentPlanButton = isCurrentPlan;
   
   return (
-    <div className="pt-6">
-      <h2 className="text-2xl font-medium text-gray-900 mb-2">{name}</h2>
-      <p className="text-4xl font-medium text-gray-900 mb-6">
+    <div className="bg-card border border-border rounded-lg p-8 hover:shadow-lg transition-shadow duration-300">
+      <h2 className="text-2xl font-medium text-card-foreground mb-2">{name}</h2>
+      <p className="text-4xl font-medium text-card-foreground mb-6">
         {isFree ? (
           <>
             Free
@@ -87,7 +93,7 @@ function PricingCard({
         ) : (
           <>
             ${price / 100}{' '}
-            <span className="text-xl font-normal text-gray-600">
+            <span className="text-xl font-normal text-muted-foreground">
               / {interval}
             </span>
           </>
@@ -96,8 +102,8 @@ function PricingCard({
       <ul className="space-y-4 mb-8">
         {features.map((feature, index) => (
           <li key={index} className="flex items-start">
-            <Check className="h-5 w-5 text-orange-500 mr-2 mt-0.5 flex-shrink-0" />
-            <span className="text-gray-700">{feature}</span>
+            <Check className="h-5 w-5 text-ai-primary mr-2 mt-0.5 flex-shrink-0" />
+            <span className="text-muted-foreground">{feature}</span>
           </li>
         ))}
       </ul>
@@ -113,7 +119,7 @@ function PricingCard({
         <Button
           disabled
           variant="outline"
-          className="w-full rounded-full"
+          className="w-full rounded-full border-border"
         >
           Current Plan
         </Button>
@@ -123,7 +129,7 @@ function PricingCard({
         <Button
           disabled
           variant="outline"
-          className="w-full rounded-full"
+          className="w-full rounded-full border-border"
         >
           Previous Plan
         </Button>

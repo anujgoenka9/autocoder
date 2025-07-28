@@ -18,9 +18,9 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function UserProfileSkeleton() {
   return (
-    <Card className="mb-8 h-[140px]">
+    <Card className="mb-8 h-[140px] bg-card border-border">
       <CardHeader>
-        <CardTitle>Account Information</CardTitle>
+        <CardTitle className="text-card-foreground">Account Information</CardTitle>
       </CardHeader>
     </Card>
   );
@@ -34,9 +34,9 @@ function UserProfile() {
   }
 
   return (
-    <Card className="mb-8">
+    <Card className="mb-8 bg-card border-border">
       <CardHeader>
-        <CardTitle>Account Information</CardTitle>
+        <CardTitle className="text-card-foreground">Account Information</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-center space-x-4">
@@ -47,7 +47,7 @@ function UserProfile() {
             </AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold">
+            <h3 className="text-lg font-semibold text-card-foreground">
               {userData.name || 'User'}
             </h3>
             <p className="text-sm text-muted-foreground">{userData.email}</p>
@@ -69,13 +69,13 @@ function SubscriptionCard() {
   const canUpgrade = userData?.subscriptionPlan === 'base';
 
   return (
-    <Card>
+    <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Subscription</CardTitle>
+        <CardTitle className="text-sm font-medium text-card-foreground">Subscription</CardTitle>
         <Calendar className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">
+        <div className="text-2xl font-bold text-card-foreground">
           {planName} {userData?.subscriptionPlan === 'plus' && '($12/mo)'}
         </div>
         <p className="text-xs text-muted-foreground">
@@ -83,12 +83,12 @@ function SubscriptionCard() {
         </p>
         {canUpgrade ? (
           <Link href="/pricing">
-            <Button variant="outline" className="mt-3 w-full">
+            <Button variant="outline" className="mt-3 w-full border-border hover:bg-accent">
               Upgrade Plan
             </Button>
           </Link>
         ) : (
-          <Button variant="outline" className="mt-3 w-full" disabled>
+          <Button variant="outline" className="mt-3 w-full border-border" disabled>
             Current Plan
           </Button>
         )}
@@ -99,9 +99,9 @@ function SubscriptionCard() {
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 p-4 lg:p-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
       </div>
 
       <Suspense fallback={<UserProfileSkeleton />}>
@@ -109,54 +109,54 @@ export default function DashboardPage() {
       </Suspense>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Account</CardTitle>
+            <CardTitle className="text-sm font-medium text-card-foreground">Account</CardTitle>
             <UserIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Profile</div>
+            <div className="text-2xl font-bold text-card-foreground">Profile</div>
             <p className="text-xs text-muted-foreground">
               Manage your account settings
             </p>
             <Link href="/dashboard/general">
-              <Button variant="outline" className="mt-3 w-full">
+              <Button variant="outline" className="mt-3 w-full border-border hover:bg-accent">
                 Manage Account
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Activity</CardTitle>
+            <CardTitle className="text-sm font-medium text-card-foreground">Activity</CardTitle>
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Logs</div>
+            <div className="text-2xl font-bold text-card-foreground">Logs</div>
             <p className="text-xs text-muted-foreground">
               View your recent activity
             </p>
             <Link href="/dashboard/activity">
-              <Button variant="outline" className="mt-3 w-full">
+              <Button variant="outline" className="mt-3 w-full border-border hover:bg-accent">
                 View Activity
               </Button>
             </Link>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-card border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Projects</CardTitle>
+            <CardTitle className="text-sm font-medium text-card-foreground">Projects</CardTitle>
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">Workspace</div>
+            <div className="text-2xl font-bold text-card-foreground">Workspace</div>
             <p className="text-xs text-muted-foreground">
               Build and manage your projects
             </p>
             <Link href="/projects">
-              <Button variant="outline" className="mt-3 w-full">
+              <Button variant="outline" className="mt-3 w-full border-border hover:bg-accent">
                 Open Projects
               </Button>
             </Link>
@@ -166,9 +166,9 @@ export default function DashboardPage() {
         <SubscriptionCard />
       </div>
 
-      <Card>
+      <Card className="bg-card border-border">
         <CardHeader>
-          <CardTitle>Welcome to your Dashboard!</CardTitle>
+          <CardTitle className="text-card-foreground">Welcome to your Dashboard!</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground">
