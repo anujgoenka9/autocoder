@@ -201,6 +201,7 @@ async function main() {
   const STRIPE_WEBHOOK_SECRET = await createStripeWebhook();
   const BASE_URL = 'http://localhost:3000';
   const AUTH_SECRET = generateAuthSecret();
+  const AGENT_API_BASE_URL = 'http://localhost:8000';
 
   await writeEnvFile({
     POSTGRES_URL,
@@ -208,6 +209,7 @@ async function main() {
     STRIPE_WEBHOOK_SECRET,
     BASE_URL,
     AUTH_SECRET,
+    AGENT_API_BASE_URL,
   });
 
   console.log('🎉 Setup completed successfully!');

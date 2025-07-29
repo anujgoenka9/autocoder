@@ -27,7 +27,7 @@ from langgraph_code_agent import (
 
 class NewProjectRequest(BaseModel):
     user_id: str
-    project_name: str
+    project_id: str
     task: str
     # Optional: Frontend can pass additional context
     frontend_context: Optional[Dict[str, Any]] = None
@@ -50,6 +50,7 @@ class ProjectResponse(BaseModel):
     # Additional metadata for frontend
     execution_time: Optional[float] = None
     files_created: Optional[List[str]] = None
+    task_summary: Optional[str] = None
 
 class StreamResponse(BaseModel):
     type: str  # "status", "output", "error", "complete"
@@ -112,10 +113,10 @@ async def create_new_project(request: NewProjectRequest, background_tasks: Backg
     start_time = datetime.now()
     
     try:
-        print(f"🚀 API: Starting new project '{request.project_name}' for user {request.user_id}")
+        print(f"🚀 API: Starting new project '{request.project_id}' for user {request.user_id}")
         
         # Create new sandbox with metadata
-        sandbox, project_id = ProjectSession.create_new_sandbox(request.user_id, request.project_name)
+        sandbox, project_id = ProjectSession.create_new_sandbox(request.user_id, request.project_id)
         
         # Initialize state for new project
         initial_state = State(
@@ -139,16 +140,17 @@ async def create_new_project(request: NewProjectRequest, background_tasks: Backg
         # Calculate execution time
         execution_time = (datetime.now() - start_time).total_seconds()
         
-        print(f"✅ Project '{request.project_name}' created successfully!")
+        print(f"✅ Project '{request.project_id}' created successfully!")
         print(f"📁 Files created: {list(final_state['files_created'].keys())}")
         
         return ProjectResponse(
             success=True,
             project_id=project_id,
             sandbox_url=final_state['sandbox_url'],
-            message=f"Project '{request.project_name}' created successfully",
+            message=f"Project '{request.project_id}' created successfully",
             execution_time=execution_time,
-            files_created=list(final_state['files_created'].keys())
+            files_created=list(final_state['files_created'].keys()),
+            task_summary=final_state.get('task_summary', '')
         )
         
     except Exception as e:

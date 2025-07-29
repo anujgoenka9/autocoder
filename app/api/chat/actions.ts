@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentOrCreateProject, saveMessage, getProjectMessages, createProject, updateProjectName, getProjectById } from '@/lib/db/queries';
+import { getCurrentOrCreateProject, saveMessage, getProjectMessages, createProject, updateProjectName, getProjectById, getUser } from '@/lib/db/queries';
 import { MessageRole, MessageType } from '@/lib/db/schema';
 
 export async function initializeChat() {
@@ -31,29 +31,102 @@ export async function initializeChat() {
 
 export async function sendChatMessage(content: string, projectId?: string) {
   try {
+    // Get current authenticated user
+    const currentUser = await getUser();
+    if (!currentUser) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
+    }
+
     // Get or create project
     let project;
+    
     if (projectId) {
       // If we have a project ID, we'll use it (though we should validate ownership)
       project = { id: projectId };
     } else {
       // Create a new project for the first message
-      const projectName = content.length > 50 ? content.substring(0, 47) + '...' : content;
+      const projectName = 'New Project';
       project = await createProject(projectName);
     }
+
+    // Check if this is the first message in the project (empty messages means it's a new project)
+    const existingMessages = await getProjectMessages(project.id);
+    const isNewProject = existingMessages.length === 0;
 
     // Save user message
     await saveMessage(project.id, content, MessageRole.USER);
 
-    // Generate AI response (mock for now)
-    const mockResponses = [
-      "I'll create that component for you right away! Let me update the code...",
-      "Great idea! I'll implement that feature with a modern design.",
-      "Perfect! I'll add those styles and make it responsive.",
-      "Absolutely! Let me build that interface with beautiful animations."
-    ];
-    
-    const aiResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+    let aiResponse: string;
+    let sandboxUrl: string | undefined;
+    let filesCreated: string[] | undefined;
+
+    if (isNewProject) {
+      // For new projects, call the agent API
+      try {
+        const agentResponse = await fetch(`${process.env.BASE_URL || 'http://localhost:3000'}/api/agent`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            task: content,
+            projectId: project.id,
+            userId: currentUser.id.toString(), // Use the real user ID from database
+          }),
+        });
+
+        if (agentResponse.ok) {
+          const agentResult = await agentResponse.json();
+          
+          if (agentResult.success && agentResult.data.success) {
+            // Agent successfully created the project
+            const taskSummary = agentResult.data.task_summary || 'Project created successfully with the requested features.';
+            
+            aiResponse = `🎉 Project created successfully! I've built your application based on your request: "${content}"
+
+📝 **What I Built**: ${taskSummary}
+
+🔗 **Sandbox URL**: ${agentResult.data.sandbox_url}
+📁 **Files Created**: ${agentResult.data.files_created?.join(', ') || 'Multiple files'}
+⏱️ **Execution Time**: ${agentResult.data.execution_time?.toFixed(2) || 'N/A'} seconds`;
+            
+            sandboxUrl = agentResult.data.sandbox_url;
+            filesCreated = agentResult.data.files_created;
+          } else {
+            // Agent failed but we have an error message
+            aiResponse = `❌ I encountered an issue while creating your project: ${agentResult.data.error || 'Unknown error'}
+
+Please try again with a different description or let me know if you need help troubleshooting.`;
+          }
+        } else {
+          // HTTP error from agent API
+          const errorText = await agentResponse.text();
+          console.error('Agent API error:', errorText);
+          aiResponse = `❌ I'm having trouble connecting to my development environment right now. Please try again in a moment, or contact support if the issue persists.
+
+Error: ${agentResponse.status} ${agentResponse.statusText}`;
+        }
+      } catch (agentError) {
+        console.error('Error calling agent API:', agentError);
+        aiResponse = `❌ I'm experiencing technical difficulties right now. Please try again in a moment.
+
+Error: ${agentError instanceof Error ? agentError.message : 'Unknown error'}`;
+      }
+    } else {
+      // For existing projects, use mock response for now
+      // TODO: Implement continue project functionality
+      const mockResponses = [
+        "I'll update that component for you right away! Let me modify the code...",
+        "Great idea! I'll enhance that feature with the improvements you requested.",
+        "Perfect! I'll update those styles and make the changes you need.",
+        "Absolutely! Let me modify that interface with your requested changes."
+      ];
+      
+      aiResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+    }
     
     // Save AI response
     const aiMessage = await saveMessage(project.id, aiResponse, MessageRole.ASSISTANT);
@@ -73,6 +146,8 @@ export async function sendChatMessage(content: string, projectId?: string) {
         type: 'ai' as const,
         timestamp: aiMessage.createdAt,
       },
+      sandboxUrl,
+      filesCreated,
     };
   } catch (error) {
     console.error('Failed to send message:', error);

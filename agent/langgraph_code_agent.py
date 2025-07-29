@@ -28,23 +28,20 @@ class ProjectSession:
     """Manages persistent project sessions across conversations"""
     
     @staticmethod
-    def create_new_sandbox(user_id: str, project_name: str) -> tuple[Sandbox, str]:
+    def create_new_sandbox(user_id: str, project_id: str) -> tuple[Sandbox, str]:
         """Create a new sandbox with metadata for a project"""
-        project_id = str(uuid.uuid4())[:8]  # Short project ID
-        
         sandbox = Sandbox(
             template=TEMPLATE_NAME,
             timeout= 600,
             metadata={
                 "user_id": user_id,
                 "project_id": project_id,
-                "project_name": project_name,
                 "created_at": datetime.now().isoformat(),
                 "session_type": "new"
             }
         )
         
-        print(f"🚀 Created new sandbox for project '{project_name}' (ID: {project_id})")
+        print(f"🚀 Created new sandbox for project (ID: {project_id})")
         return sandbox, project_id
     
     @staticmethod
@@ -84,6 +81,7 @@ class State(MessagesState):
     sandbox_url: str
     files_created: Dict[str, str]
     task_complete: bool
+    task_summary: str = ""  # Summary of what was accomplished
     # Session management fields
     session_type: str = "new"  # "new" or "continuing"
     conversation_history: str = ""  # Previous conversation summary
@@ -262,6 +260,7 @@ def tool_handler(state: State):
     
     result_messages = []
     files_created = state.get("files_created", {}).copy()  # Get current files_created
+    task_summary = state.get("task_summary", "")  # Get current task summary
     
     # Get the last message (should contain tool calls)
     last_message = state["messages"][-1]
@@ -310,9 +309,11 @@ def tool_handler(state: State):
             # Handle TaskComplete tool
             elif tool_name == "TaskComplete":
                 try:
-                    # Update task_complete status
+                    # Update task_complete status and capture summary
                     task_complete = tool_args.get("completed", True)
+                    task_summary = tool_args.get("summary", "")
                     print(f"✅ Task marked as complete: {task_complete}")
+                    print(f"📝 Task summary: {task_summary}")
                 except Exception as e:
                     print(f"⚠️ Warning: Could not update task completion status: {e}")
             
@@ -333,11 +334,12 @@ def tool_handler(state: State):
                 "tool_call_id": tool_id
             })
     
-    # Return updated state with files_created and task_complete
+    # Return updated state with files_created, task_complete, and task_summary
     return {
         "messages": result_messages,
         "files_created": files_created,
-        "task_complete": task_complete if 'task_complete' in locals() else state.get("task_complete", False)
+        "task_complete": task_complete if 'task_complete' in locals() else state.get("task_complete", False),
+        "task_summary": task_summary if 'task_summary' in locals() else state.get("task_summary", "")
     }
 
 
@@ -387,7 +389,7 @@ def create_code_agent():
 # MAIN EXECUTION FUNCTION
 # ========================
 
-def run_code_generation_task(prompt: str, user_id: str = "standalone_user", project_id: str = "standalone_project", session_type: str = "new", conversation_history: str = "", project_name: str = "Standalone Project"):
+def run_code_generation_task(prompt: str, user_id: str = "standalone_user", project_id: str = "standalone_project", session_type: str = "new", conversation_history: str = ""):
     """
     Create a sandbox and run the code generation task
     
@@ -397,7 +399,6 @@ def run_code_generation_task(prompt: str, user_id: str = "standalone_user", proj
         project_id: Project identifier (default: "standalone_project")
         session_type: Session type - "new" or "continuing" (default: "new")
         conversation_history: Previous conversation summary (default: "")
-        project_name: Project name for new sessions (default: "Standalone Project")
     """
     print("🚀 Starting Code Generation Task")
     print("=" * 50)
@@ -418,10 +419,7 @@ def run_code_generation_task(prompt: str, user_id: str = "standalone_user", proj
     try:
         if session_type == "new":
             # Create new sandbox with metadata
-            sandbox, generated_project_id = ProjectSession.create_new_sandbox(user_id, project_name)
-            # Use the generated project_id if none was provided
-            if project_id == "standalone_project":
-                project_id = generated_project_id
+            sandbox, _ = ProjectSession.create_new_sandbox(user_id, project_id)
             print(f"✅ New sandbox created: {sandbox.sandbox_id}")
         else:
             # Find existing sandbox
@@ -503,7 +501,7 @@ if __name__ == "__main__":
     result = run_code_generation_task(
         prompt=prompt,
         user_id="test_user_123",
-        project_name="Animated Todo App"
+        project_id="test_project_123"
     )
     
     if result:
