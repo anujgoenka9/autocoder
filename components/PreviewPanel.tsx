@@ -126,15 +126,15 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
                 Loading code...
               </div>
             ) : hasFragment && fragment?.files ? (
-              <div className="h-full border rounded-lg bg-background">
-                {/* File tabs - Fixed height */}
-                <div className="h-12 border-b bg-muted/20 rounded-t-lg flex items-center">
-                  <div className="flex overflow-x-auto px-2">
+              <div className="h-full border rounded-lg bg-background flex flex-col">
+                {/* File tabs */}
+                <div className="h-12 border-b bg-muted/20 rounded-t-lg flex items-center px-2">
+                  <div className="flex gap-1">
                     {Object.keys(fragment.files).map((fileName) => (
                       <button
                         key={fileName}
                         onClick={() => setActiveFile(fileName)}
-                        className={`px-3 py-1 text-sm whitespace-nowrap rounded mx-1 transition-colors ${
+                        className={`px-3 py-1 text-sm whitespace-nowrap rounded transition-colors ${
                           activeFile === fileName 
                             ? 'bg-background text-foreground shadow-sm' 
                             : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
@@ -146,46 +146,22 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
                   </div>
                 </div>
                 
-                {/* Code area - Fixed height with explicit overflow */}
-                <div 
-                  className="bg-background rounded-b-lg"
-                  style={{ height: 'calc(100% - 3rem)' }}
-                >
+                {/* Code viewer - Simple approach */}
+                <div className="flex-1 relative">
                   {activeFile && fragment.files[activeFile] ? (
-                    <div className="flex h-full">
-                      {/* Line numbers - Fixed width, scrollable */}
-                      <div 
-                        className="w-12 bg-muted/10 border-r text-xs text-muted-foreground font-mono text-right px-2 py-3"
-                        style={{ 
-                          height: '100%',
-                          overflowY: 'auto',
-                          overflowX: 'hidden'
-                        }}
-                      >
+                    <div className="absolute inset-0 flex">
+                      {/* Line numbers */}
+                      <div className="w-12 bg-muted/10 border-r text-xs text-muted-foreground font-mono text-right px-2 py-3 overflow-y-auto">
                         {fragment.files[activeFile].split('\n').map((_: string, index: number) => (
-                          <div key={index} style={{ lineHeight: '20px', height: '20px' }}>
+                          <div key={index} className="h-5 leading-5">
                             {index + 1}
                           </div>
                         ))}
                       </div>
                       
-                      {/* Code content - Scrollable */}
-                      <div 
-                        className="flex-1 bg-background"
-                        style={{
-                          height: '100%',
-                          overflow: 'auto'
-                        }}
-                      >
-                        <pre 
-                          className="text-sm font-mono p-3 m-0"
-                          style={{
-                            lineHeight: '20px',
-                            whiteSpace: 'pre',
-                            minHeight: '100%',
-                            color: 'inherit'
-                          }}
-                        >
+                      {/* Code */}
+                      <div className="flex-1 overflow-auto">
+                        <pre className="text-sm font-mono p-3 m-0 whitespace-pre">
                           {fragment.files[activeFile]}
                         </pre>
                       </div>
