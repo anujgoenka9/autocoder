@@ -2,7 +2,6 @@
 
 import { ReactNode, useState } from 'react';
 import { useParams } from 'next/navigation';
-import DashboardLayout from '@/app/(dashboard)/layout';
 import ChatInterface from '@/components/ChatInterface';
 import PreviewPanel from '@/components/PreviewPanel';
 import ResizeHandle from '@/components/ResizeHandle';

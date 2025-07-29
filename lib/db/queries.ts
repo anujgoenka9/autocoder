@@ -87,12 +87,8 @@ export async function getProjectWithMessages(projectId: string) {
   }
 
   const projectMessages = await db
-    .select({
-      message: messages,
-      fragment: fragments
-    })
+    .select()
     .from(messages)
-    .leftJoin(fragments, eq(messages.id, fragments.messageId))
     .where(eq(messages.projectId, projectId))
     .orderBy(messages.createdAt);
 

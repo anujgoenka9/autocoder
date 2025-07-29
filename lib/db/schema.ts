@@ -63,10 +63,9 @@ export const fragments = pgTable('fragments', {
     const random = Math.random().toString(36).substring(2, 15);
     return (timestamp + random).toUpperCase();
   }),
-  messageId: text('message_id')
+  projectId: text('project_id')
     .notNull()
-    .unique()
-    .references(() => messages.id, { onDelete: 'cascade' }),
+    .references(() => projects.id, { onDelete: 'cascade' }),
   sandboxUrl: text('sandbox_url').notNull(),
   title: text('title').notNull(),
   files: jsonb('files').notNull(),
@@ -92,6 +91,7 @@ export const projectsRelations = relations(projects, ({ one, many }) => ({
     references: [users.id],
   }),
   messages: many(messages),
+  fragment: one(fragments),
 }));
 
 export const messagesRelations = relations(messages, ({ one }) => ({
@@ -99,16 +99,12 @@ export const messagesRelations = relations(messages, ({ one }) => ({
     fields: [messages.projectId],
     references: [projects.id],
   }),
-  fragment: one(fragments, {
-    fields: [messages.id],
-    references: [fragments.messageId],
-  }),
 }));
 
 export const fragmentsRelations = relations(fragments, ({ one }) => ({
-  message: one(messages, {
-    fields: [fragments.messageId],
-    references: [messages.id],
+  project: one(projects, {
+    fields: [fragments.projectId],
+    references: [projects.id],
   }),
 }));
 
