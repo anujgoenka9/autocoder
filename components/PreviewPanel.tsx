@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Code, Eye, MessageSquare, Copy, Check } from 'lucide-react';
@@ -9,11 +9,13 @@ interface PreviewPanelProps {
 }
 
 const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
+  
   const [fragment, setFragment] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasFragment, setHasFragment] = useState(false);
   const [activeFile, setActiveFile] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
   // Simple scrollbar styles
   const scrollbarStyles = `
@@ -61,7 +63,58 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
     loadFragment();
   }, [projectId]);
 
+  // Set up real-time updates via Server-Sent Events
+  useEffect(() => {
+    if (!projectId) {
+      return;
+    }
 
+    // Close existing connection if any
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
+    const eventSource = new EventSource(`/api/events/fragments/${projectId}`);
+    eventSourceRef.current = eventSource;
+    
+    eventSource.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'fragment_updated') {
+          // Reload fragment data
+          const result = await getFragmentByProjectId(projectId);
+          if (result.success && result.fragment) {
+            setFragment(result.fragment);
+            setHasFragment(true);
+            // Keep the current active file if it still exists
+            const files = result.fragment.files;
+            if (files && Object.keys(files).length > 0) {
+              if (!activeFile || !files[activeFile]) {
+                setActiveFile(Object.keys(files)[0]);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to parse SSE message:', error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      eventSource.close();
+    };
+
+    // Cleanup on unmount or projectId change
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [projectId]);
 
   const copyToClipboard = async () => {
     if (!activeFile || !fragment?.files?.[activeFile]) return;
@@ -71,7 +124,6 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = fragment.files[activeFile];
@@ -82,7 +134,7 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (fallbackErr) {
-        console.error('Fallback copy failed:', fallbackErr);
+        console.error('Copy failed:', fallbackErr);
       }
       document.body.removeChild(textArea);
     }

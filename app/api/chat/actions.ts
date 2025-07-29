@@ -103,9 +103,8 @@ export async function sendChatMessage(content: string, projectId?: string) {
                 agentResult.data.sandbox_url,
                 agentResult.data.files_created || {}
               );
-              console.log('✅ Fragment saved/updated successfully');
             } catch (fragmentError) {
-              console.error('❌ Failed to save fragment:', fragmentError);
+              console.error('Failed to save fragment:', fragmentError);
               // Don't fail the entire request if fragment saving fails
             }
           } else {
@@ -174,9 +173,8 @@ Error: ${agentError instanceof Error ? agentError.message : 'Unknown error'}`;
                 agentResult.data.sandbox_url,
                 agentResult.data.files_created || {}
               );
-              console.log('✅ Fragment saved/updated successfully');
             } catch (fragmentError) {
-              console.error('❌ Failed to save fragment:', fragmentError);
+              console.error('Failed to save fragment:', fragmentError);
               // Don't fail the entire request if fragment saving fails
             }
           } else {
