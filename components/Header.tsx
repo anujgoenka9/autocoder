@@ -1,7 +1,6 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Sparkles, Share2, Settings, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -53,6 +52,7 @@ const Header = () => {
         {/* Actions */}
         <div className="flex items-center gap-2">
           <Button 
+            className="cursor-pointer"
             variant="ghost" 
             size="sm" 
             onClick={handleNewProject}
@@ -61,10 +61,15 @@ const Header = () => {
             <Plus className="w-4 h-4 mr-2" />
             {isCreatingProject ? 'Creating...' : 'New Project'}
           </Button>
-          <Button variant="ghost" size="sm">
+          <Button 
+            className="cursor-pointer" 
+            variant="ghost" 
+            size="sm"
+            onClick={() => router.push('/account-settings')}
+          >
             <Settings className="w-4 h-4" />
           </Button>
-          <Button size="sm" className="bg-gradient-primary hover:opacity-90">
+          <Button size="sm" className="bg-gradient-primary hover:opacity-90 cursor-pointer">
             <Share2 className="w-4 h-4 mr-2" />
             Share
           </Button>
