@@ -36,7 +36,7 @@ export default function ProjectsLayout({
         
         {/* Preview Panel */}
         <div className="flex-1">
-          <PreviewPanel />
+          <PreviewPanel projectId={projectId} />
         </div>
       </div>
     </div>

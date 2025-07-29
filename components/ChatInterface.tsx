@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Send, Bot, User, Edit3, Check, X } from 'lucide-react';
 import { initializeChat, sendChatMessage, updateProjectNameAction, loadProjectById } from '@/app/api/chat/actions';
 
@@ -23,6 +23,8 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
   const messageIdCounter = useRef(0);
   const currentProjectId = useRef<string | null>(null);
   const editInputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   
   const [messages, setMessages] = useState<Message[]>([]);
@@ -74,6 +76,20 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
       editInputRef.current.select();
     }
   }, [isEditingName]);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    const scrollToBottom = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+    
+    // Small delay to ensure DOM is updated
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [messages, isTyping]);
 
   const startEditingName = () => {
     setEditingName(projectName);
@@ -258,7 +274,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
+      <div className="flex-1 overflow-y-auto p-4 scroll-smooth" ref={scrollAreaRef}>
         <div className="space-y-4">
           {messages.map((message) => (
             <div
@@ -329,8 +345,10 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
               </div>
             </div>
           )}
+          {/* Scroll end marker for auto-scroll */}
+          <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input */}
       <div className="p-4 border-t border-chat-border">

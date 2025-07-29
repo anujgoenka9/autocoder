@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, users, projects, messages, fragments, type NewProject, type NewMessage, MessageRole, MessageType } from './schema';
+import { activityLogs, users, projects, messages, fragments, type NewProject, type NewMessage, type NewFragment, MessageRole, MessageType } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -259,4 +259,82 @@ export async function deleteProject(projectId: string) {
     .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)));
 
   return { success: true };
+}
+
+export async function getFragmentByProjectId(projectId: string) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Verify user owns the project
+  const project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found or access denied');
+  }
+
+  const fragment = await db
+    .select()
+    .from(fragments)
+    .where(eq(fragments.projectId, projectId))
+    .limit(1);
+
+  return fragment.length > 0 ? fragment[0] : null;
+}
+
+export async function createOrUpdateFragment(projectId: string, sandboxUrl: string, files: Record<string, string>) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  // Verify user owns the project
+  const project = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found or access denied');
+  }
+
+  // Check if fragment already exists
+  const existingFragment = await db
+    .select()
+    .from(fragments)
+    .where(eq(fragments.projectId, projectId))
+    .limit(1);
+
+  if (existingFragment.length > 0) {
+    // Update existing fragment
+    const [updatedFragment] = await db
+      .update(fragments)
+      .set({
+        sandboxUrl,
+        files,
+        updatedAt: new Date()
+      })
+      .where(eq(fragments.projectId, projectId))
+      .returning();
+
+    return updatedFragment;
+  } else {
+    // Create new fragment
+    const [newFragment] = await db
+      .insert(fragments)
+      .values({
+        projectId,
+        sandboxUrl,
+        files
+      })
+      .returning();
+
+    return newFragment;
+  }
 }

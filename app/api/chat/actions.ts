@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentOrCreateProject, saveMessage, getProjectMessages, createProject, updateProjectName, getProjectById, getUser } from '@/lib/db/queries';
+import { getCurrentOrCreateProject, saveMessage, getProjectMessages, createProject, updateProjectName, getProjectById, getUser, createOrUpdateFragment } from '@/lib/db/queries';
 import { MessageRole, MessageType } from '@/lib/db/schema';
 
 export async function initializeChat() {
@@ -90,11 +90,24 @@ export async function sendChatMessage(content: string, projectId?: string) {
 📝 **What I Built**: ${taskSummary}
 
 🔗 **Sandbox URL**: ${agentResult.data.sandbox_url}
-📁 **Files Created**: ${agentResult.data.files_created?.join(', ') || 'Multiple files'}
+📁 **Files Created**: ${Object.keys(agentResult.data.files_created || {}).join(', ') || 'Multiple files'}
 ⏱️ **Execution Time**: ${agentResult.data.execution_time?.toFixed(2) || 'N/A'} seconds`;
             
             sandboxUrl = agentResult.data.sandbox_url;
             filesCreated = agentResult.data.files_created;
+            
+            // Save or update fragment with file contents
+            try {
+              await createOrUpdateFragment(
+                project.id,
+                agentResult.data.sandbox_url,
+                agentResult.data.files_created || {}
+              );
+              console.log('✅ Fragment saved/updated successfully');
+            } catch (fragmentError) {
+              console.error('❌ Failed to save fragment:', fragmentError);
+              // Don't fail the entire request if fragment saving fails
+            }
           } else {
             // Agent failed but we have an error message
             aiResponse = `❌ I encountered an issue while creating your project: ${agentResult.data.error || 'Unknown error'}
@@ -116,16 +129,76 @@ Error: ${agentResponse.status} ${agentResponse.statusText}`;
 Error: ${agentError instanceof Error ? agentError.message : 'Unknown error'}`;
       }
     } else {
-      // For existing projects, use mock response for now
-      // TODO: Implement continue project functionality
-      const mockResponses = [
-        "I'll update that component for you right away! Let me modify the code...",
-        "Great idea! I'll enhance that feature with the improvements you requested.",
-        "Perfect! I'll update those styles and make the changes you need.",
-        "Absolutely! Let me modify that interface with your requested changes."
-      ];
-      
-      aiResponse = mockResponses[Math.floor(Math.random() * mockResponses.length)];
+      // For existing projects, call the continue project API
+      try {
+        // Get conversation history for context
+        const conversationHistory = existingMessages
+          .map(msg => `${msg.role}: ${msg.content}`)
+          .join('\n');
+        
+        const agentResponse = await fetch(`${process.env.BASE_URL || 'http://localhost:3000'}/api/agent/continue`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            task: content,
+            projectId: project.id,
+            userId: currentUser.id.toString(),
+            conversationHistory: conversationHistory,
+          }),
+        });
+
+        if (agentResponse.ok) {
+          const agentResult = await agentResponse.json();
+          
+          if (agentResult.success && agentResult.data.success) {
+            // Agent successfully updated the project
+            const taskSummary = agentResult.data.task_summary || 'Project updated successfully with the requested changes.';
+            
+            aiResponse = `🎉 Project updated successfully! I've made the changes you requested: "${content}"
+
+📝 **What I Updated**: ${taskSummary}
+
+🔗 **Sandbox URL**: ${agentResult.data.sandbox_url}
+📁 **Files Modified**: ${Object.keys(agentResult.data.files_created || {}).join(', ') || 'Multiple files'}
+⏱️ **Execution Time**: ${agentResult.data.execution_time?.toFixed(2) || 'N/A'} seconds`;
+            
+            sandboxUrl = agentResult.data.sandbox_url;
+            filesCreated = agentResult.data.files_created;
+            
+            // Save or update fragment with file contents
+            try {
+              await createOrUpdateFragment(
+                project.id,
+                agentResult.data.sandbox_url,
+                agentResult.data.files_created || {}
+              );
+              console.log('✅ Fragment saved/updated successfully');
+            } catch (fragmentError) {
+              console.error('❌ Failed to save fragment:', fragmentError);
+              // Don't fail the entire request if fragment saving fails
+            }
+          } else {
+            // Agent failed but we have an error message
+            aiResponse = `❌ I encountered an issue while updating your project: ${agentResult.data.error || 'Unknown error'}
+
+Please try again with a different description or let me know if you need help troubleshooting.`;
+          }
+        } else {
+          // HTTP error from agent API
+          const errorText = await agentResponse.text();
+          console.error('Agent API error:', errorText);
+          aiResponse = `❌ I'm having trouble connecting to my development environment right now. Please try again in a moment, or contact support if the issue persists.
+
+Error: ${agentResponse.status} ${agentResponse.statusText}`;
+        }
+      } catch (agentError) {
+        console.error('Error calling agent API:', agentError);
+        aiResponse = `❌ I'm experiencing technical difficulties right now. Please try again in a moment.
+
+Error: ${agentError instanceof Error ? agentError.message : 'Unknown error'}`;
+      }
     }
     
     // Save AI response

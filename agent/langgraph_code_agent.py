@@ -298,10 +298,11 @@ def tool_handler(state: State):
                     print(f"📝 Processing {len(files_data)} files for tracking")
                     for file_data in files_data:
                         file_path = file_data.get("path")
+                        file_content = file_data.get("content", "")
                         if file_path:
-                            # Store file path and a timestamp
-                            files_created[file_path] = f"created_at_{int(time.time())}"
-                            print(f"📝 Tracked file creation: {file_path}")
+                            # Store file path and actual file content
+                            files_created[file_path] = file_content
+                            print(f"📝 Tracked file creation: {file_path} ({len(file_content)} characters)")
                     print(f"📊 Total files tracked: {len(files_created)}")
                 except Exception as e:
                     print(f"⚠️ Warning: Could not track file creation: {e}")

@@ -49,7 +49,7 @@ class ProjectResponse(BaseModel):
     error: Optional[str] = None
     # Additional metadata for frontend
     execution_time: Optional[float] = None
-    files_created: Optional[List[str]] = None
+    files_created: Optional[Dict[str, str]] = None  # File path -> file content
     task_summary: Optional[str] = None
 
 class StreamResponse(BaseModel):
@@ -149,7 +149,7 @@ async def create_new_project(request: NewProjectRequest, background_tasks: Backg
             sandbox_url=final_state['sandbox_url'],
             message=f"Project '{request.project_id}' created successfully",
             execution_time=execution_time,
-            files_created=list(final_state['files_created'].keys()),
+            files_created=final_state['files_created'],  # Return full dictionary with file contents
             task_summary=final_state.get('task_summary', '')
         )
         
@@ -211,7 +211,8 @@ async def continue_existing_project(request: ContinueProjectRequest):
             sandbox_url=final_state['sandbox_url'],
             message=f"Project {request.project_id} updated successfully",
             execution_time=execution_time,
-            files_created=list(final_state['files_created'].keys())
+            files_created=final_state['files_created'],  # Return full dictionary with file contents
+            task_summary=final_state.get('task_summary', '')
         )
         
     except HTTPException:

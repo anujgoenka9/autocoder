@@ -1,33 +1,65 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Code, Eye, Smartphone, Monitor, Tablet } from 'lucide-react';
+import { Code, Eye, Smartphone, Monitor, Tablet, MessageSquare } from 'lucide-react';
+import { getFragmentByProjectId } from '@/app/api/fragments/actions';
 
-const PreviewPanel = () => {
+interface PreviewPanelProps {
+  projectId?: string;
+}
+
+const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
   const [activeView, setActiveView] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [fragment, setFragment] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasFragment, setHasFragment] = useState(false);
+  const [activeFile, setActiveFile] = useState<string>('');
 
-  const sampleCode = `import React from 'react';
-import { Button } from '@/components/ui/button';
+  // Simple scrollbar styles
+  const scrollbarStyles = `
+    .scrollable {
+      scrollbar-width: thin;
+      scrollbar-color: #9ca3af transparent;
+    }
+  `;
 
-const App = () => {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-      <div className="text-center text-white">
-        <h1 className="text-4xl font-bold mb-4">
-          Welcome to Your App
-        </h1>
-        <p className="text-xl mb-8">
-          Built with AI assistance
-        </p>
-        <Button className="bg-white text-purple-600 hover:bg-gray-100">
-          Get Started
-        </Button>
-      </div>
-    </div>
-  );
-};
+  // Fetch fragment data when projectId changes
+  useEffect(() => {
+    const loadFragment = async () => {
+      if (!projectId) {
+        setIsLoading(false);
+        setHasFragment(false);
+        return;
+      }
 
-export default App;`;
+      try {
+        setIsLoading(true);
+        const result = await getFragmentByProjectId(projectId);
+        
+        if (result.success && result.fragment) {
+          setFragment(result.fragment);
+          setHasFragment(true);
+          // Set the first file as active
+          const files = result.fragment.files;
+          if (files && Object.keys(files).length > 0) {
+            setActiveFile(Object.keys(files)[0]);
+          }
+        } else {
+          setFragment(null);
+          setHasFragment(false);
+          setActiveFile('');
+        }
+      } catch (error) {
+        console.error('Failed to load fragment:', error);
+        setFragment(null);
+        setHasFragment(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFragment();
+  }, [projectId]);
 
   const getFrameClass = () => {
     switch (activeView) {
@@ -41,42 +73,10 @@ export default App;`;
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-preview">
-      {/* Header */}
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h2 className="font-semibold text-foreground">Live Preview</h2>
-            <div className="flex items-center gap-1">
-              <Button
-                variant={activeView === 'desktop' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveView('desktop')}
-              >
-                <Monitor className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={activeView === 'tablet' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveView('tablet')}
-              >
-                <Tablet className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={activeView === 'mobile' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveView('mobile')}
-              >
-                <Smartphone className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full" />
-            <span className="text-sm text-muted-foreground">Live</span>
-          </div>
-        </div>
-      </div>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: scrollbarStyles }} />
+      <div className="flex flex-col h-full bg-gradient-preview">
+
 
       {/* Content */}
       <div className="flex-1">
@@ -94,34 +94,125 @@ export default App;`;
           
           <TabsContent value="preview" className="flex-1 p-4">
             <div className="h-full flex items-center justify-center">
-              <div className={`${getFrameClass()} bg-white rounded-lg shadow-2xl overflow-hidden transition-all duration-300`}>
-                <div className="h-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
-                  <div className="text-center text-white p-8">
-                    <h1 className="text-4xl font-bold mb-4">
-                      Welcome to Your App
-                    </h1>
-                    <p className="text-xl mb-8">
-                      Built with AI assistance
-                    </p>
-                    <Button className="bg-white text-purple-600 hover:bg-gray-100">
-                      Get Started
-                    </Button>
-                  </div>
+              {isLoading ? (
+                <div className="text-center text-muted-foreground">
+                  <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4" />
+                  Loading preview...
                 </div>
-              </div>
+              ) : hasFragment && fragment?.sandboxUrl ? (
+                <div className={`${getFrameClass()} bg-white rounded-lg shadow-2xl overflow-hidden transition-all duration-300`}>
+                  <iframe
+                    src={fragment.sandboxUrl}
+                    className="w-full h-full border-0"
+                    title="Project Preview"
+                  />
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground max-w-md">
+                  <MessageSquare className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No Preview Available</h3>
+                  <p className="text-sm leading-relaxed">
+                    Start a conversation with the AI assistant to create your application and see the live preview here.
+                  </p>
+                </div>
+              )}
             </div>
           </TabsContent>
           
           <TabsContent value="code" className="flex-1 p-4">
-            <div className="h-full bg-secondary rounded-lg p-4 overflow-auto">
-              <pre className="text-sm text-foreground font-mono">
-                <code>{sampleCode}</code>
-              </pre>
-            </div>
+            {isLoading ? (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3" />
+                Loading code...
+              </div>
+            ) : hasFragment && fragment?.files ? (
+              <div className="h-full border rounded-lg bg-background">
+                {/* File tabs - Fixed height */}
+                <div className="h-12 border-b bg-muted/20 rounded-t-lg flex items-center">
+                  <div className="flex overflow-x-auto px-2">
+                    {Object.keys(fragment.files).map((fileName) => (
+                      <button
+                        key={fileName}
+                        onClick={() => setActiveFile(fileName)}
+                        className={`px-3 py-1 text-sm whitespace-nowrap rounded mx-1 transition-colors ${
+                          activeFile === fileName 
+                            ? 'bg-background text-foreground shadow-sm' 
+                            : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                        }`}
+                      >
+                        {fileName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Code area - Fixed height with explicit overflow */}
+                <div 
+                  className="bg-background rounded-b-lg"
+                  style={{ height: 'calc(100% - 3rem)' }}
+                >
+                  {activeFile && fragment.files[activeFile] ? (
+                    <div className="flex h-full">
+                      {/* Line numbers - Fixed width, scrollable */}
+                      <div 
+                        className="w-12 bg-muted/10 border-r text-xs text-muted-foreground font-mono text-right px-2 py-3"
+                        style={{ 
+                          height: '100%',
+                          overflowY: 'auto',
+                          overflowX: 'hidden'
+                        }}
+                      >
+                        {fragment.files[activeFile].split('\n').map((_: string, index: number) => (
+                          <div key={index} style={{ lineHeight: '20px', height: '20px' }}>
+                            {index + 1}
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Code content - Scrollable */}
+                      <div 
+                        className="flex-1 bg-background"
+                        style={{
+                          height: '100%',
+                          overflow: 'auto'
+                        }}
+                      >
+                        <pre 
+                          className="text-sm font-mono p-3 m-0"
+                          style={{
+                            lineHeight: '20px',
+                            whiteSpace: 'pre',
+                            minHeight: '100%',
+                            color: 'inherit'
+                          }}
+                        >
+                          {fragment.files[activeFile]}
+                        </pre>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center">
+                      <span className="text-muted-foreground">Select a file to view its contents</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-muted-foreground">
+                <div className="text-center max-w-md">
+                  <Code className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No Code Available</h3>
+                  <p className="text-sm leading-relaxed">
+                    Create your first application to see the generated code here.
+                  </p>
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
     </div>
+    </>
   );
 };
 

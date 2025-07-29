@@ -29,6 +29,13 @@
       "when": 1753755900096,
       "tag": "0003_fragment_projectid",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1753773604377,
+      "tag": "0004_fragment_remove_title",
+      "breakpoints": true
     }
   ]
 }
