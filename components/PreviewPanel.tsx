@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Code, Eye, Smartphone, Monitor, Tablet, MessageSquare } from 'lucide-react';
+import { Code, Eye, MessageSquare, Copy, Check } from 'lucide-react';
 import { getFragmentByProjectId } from '@/app/api/fragments/actions';
 
 interface PreviewPanelProps {
@@ -9,11 +9,11 @@ interface PreviewPanelProps {
 }
 
 const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
-  const [activeView, setActiveView] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [fragment, setFragment] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasFragment, setHasFragment] = useState(false);
   const [activeFile, setActiveFile] = useState<string>('');
+  const [copied, setCopied] = useState(false);
 
   // Simple scrollbar styles
   const scrollbarStyles = `
@@ -61,14 +61,30 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
     loadFragment();
   }, [projectId]);
 
-  const getFrameClass = () => {
-    switch (activeView) {
-      case 'mobile':
-        return 'w-[375px] h-[667px]';
-      case 'tablet':
-        return 'w-[768px] h-[1024px]';
-      default:
-        return 'w-full h-full';
+
+
+  const copyToClipboard = async () => {
+    if (!activeFile || !fragment?.files?.[activeFile]) return;
+    
+    try {
+      await navigator.clipboard.writeText(fragment.files[activeFile]);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = fragment.files[activeFile];
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr);
+      }
+      document.body.removeChild(textArea);
     }
   };
 
@@ -100,7 +116,7 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
                   Loading preview...
                 </div>
               ) : hasFragment && fragment?.sandboxUrl ? (
-                <div className={`${getFrameClass()} bg-white rounded-lg shadow-2xl overflow-hidden transition-all duration-300`}>
+                <div className="w-full h-full bg-white rounded-lg shadow-2xl overflow-hidden">
                   <iframe
                     src={fragment.sandboxUrl}
                     className="w-full h-full border-0"
@@ -127,8 +143,8 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
               </div>
             ) : hasFragment && fragment?.files ? (
               <div className="h-full border rounded-lg bg-background flex flex-col">
-                {/* File tabs */}
-                <div className="h-12 border-b bg-muted/20 rounded-t-lg flex items-center px-2">
+                {/* File tabs with copy button */}
+                <div className="h-12 border-b bg-muted/20 rounded-t-lg flex items-center justify-between px-2">
                   <div className="flex gap-1">
                     {Object.keys(fragment.files).map((fileName) => (
                       <button
@@ -144,6 +160,23 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
                       </button>
                     ))}
                   </div>
+                  
+                  {/* Copy button */}
+                  {activeFile && fragment.files[activeFile] && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="h-8 w-8 p-0 hover:bg-background/80 cursor-pointer"
+                      title="Copy code to clipboard"
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-600" />
+                      ) : (
+                        <Copy className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  )}
                 </div>
                 
                 {/* Code viewer - Simple approach */}
