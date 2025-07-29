@@ -193,6 +193,15 @@ async function setupRealTimePreview(): Promise<string> {
     console.log('🌐 Enter your ngrok HTTPS URL (or press Enter to skip): ');
     const ngrokUrl = await question('Ngrok URL: ');
     
+    if (ngrokUrl) {
+      console.log('');
+      console.log('✅ Next steps:');
+      console.log('1. Update the ngrok URL in: lib/db/custom_migrations/fragments_webhook_trigger.sql');
+      console.log('2. Open your Supabase dashboard → SQL Editor');
+      console.log('3. Copy and paste the SQL from the fragments_webhook_trigger.sql file');
+      console.log('4. Run the SQL to create the webhook triggers');
+    }
+    
     return ngrokUrl || '';
   }
   
