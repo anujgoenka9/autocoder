@@ -39,6 +39,30 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
             <input type="hidden" name="redirect" value={redirect || ''} />
             <input type="hidden" name="priceId" value={priceId || ''} />
             <input type="hidden" name="inviteId" value={inviteId || ''} />
+            {mode === 'signup' && (
+              <div>
+                <Label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-card-foreground"
+                >
+                  Full Name
+                </Label>
+                <div className="mt-1">
+                  <Input
+                    id="name"
+                    name="name"
+                    type="text"
+                    autoComplete="name"
+                    defaultValue={state.name}
+                    required
+                    maxLength={100}
+                    className="appearance-none rounded-full relative block w-full px-3 py-2 border border-border placeholder-muted-foreground text-card-foreground focus:outline-none focus:ring-ai-primary focus:border-ai-primary focus:z-10 sm:text-sm bg-background"
+                    placeholder="Enter your full name"
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <Label
                 htmlFor="email"
