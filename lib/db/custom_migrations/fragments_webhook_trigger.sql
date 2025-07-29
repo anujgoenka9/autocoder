@@ -10,7 +10,7 @@ create trigger "fragments_insert_webhook"
 after insert on "public"."fragments" 
 for each row
 execute function "supabase_functions"."http_request"(
-  'https://ce3bf03e24a2.ngrok-free.app/api/webhooks/fragments',
+  'https://a49b06ea353a.ngrok-free.app/api/webhooks/fragments',
   'POST',
   '{"Content-Type":"application/json"}',
   '{}',
@@ -22,7 +22,7 @@ create trigger "fragments_update_webhook"
 after update on "public"."fragments" 
 for each row
 execute function "supabase_functions"."http_request"(
-  'https://ce3bf03e24a2.ngrok-free.app/api/webhooks/fragments',
+  'https://a49b06ea353a.ngrok-free.app/api/webhooks/fragments',
   'POST',
   '{"Content-Type":"application/json"}',
   '{}',

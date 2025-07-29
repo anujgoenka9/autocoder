@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Add a small delay to ensure SSE connection is established
-    setTimeout(() => {
-      broadcastFragmentUpdate(project_id, {
+    setTimeout(async () => {
+      await broadcastFragmentUpdate(project_id, {
         type: 'fragment_updated',
         projectId: project_id,
         fragmentId: fragment_id,

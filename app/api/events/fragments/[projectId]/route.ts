@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createSSEManager, setController, removeController, getController } from '@/lib/redis';
+import { v4 as uuidv4 } from 'uuid';
 
-// In-memory store for active connections (in production, use Redis or similar)
-const connections = new Map<string, ReadableStreamDefaultController[]>();
+// SSE manager (Redis or fallback)
+const sseManager = createSSEManager();
 
 export async function GET(
   request: NextRequest,
@@ -22,27 +24,25 @@ export async function GET(
   };
 
   const stream = new ReadableStream({
-    start(controller) {
-      if (!connections.has(projectId)) {
-        connections.set(projectId, []);
-      }
-      connections.get(projectId)!.push(controller);
+    async start(controller: ReadableStreamDefaultController) {
+      const connectionId = uuidv4();
+      
+      // Store controller in memory for this instance
+      setController(projectId, connectionId, controller);
+      
+      // Register connection in Redis
+      await sseManager.addConnection(projectId, connectionId, controller);
 
       controller.enqueue(
         new TextEncoder().encode(`data: ${JSON.stringify({ type: 'connected', projectId })}\n\n`)
       );
 
-      request.signal.addEventListener('abort', () => {
-        const projectConnections = connections.get(projectId);
-        if (projectConnections) {
-          const index = projectConnections.indexOf(controller);
-          if (index > -1) {
-            projectConnections.splice(index, 1);
-          }
-          if (projectConnections.length === 0) {
-            connections.delete(projectId);
-          }
-        }
+      request.signal.addEventListener('abort', async () => {
+        // Remove from memory
+        removeController(projectId, connectionId);
+        
+        // Remove from Redis
+        await sseManager.removeConnection(projectId, connectionId);
       });
     },
   });
@@ -50,19 +50,32 @@ export async function GET(
   return new Response(stream, { headers });
 }
 
-export function broadcastFragmentUpdate(projectId: string, data: any) {
-  const projectConnections = connections.get(projectId);
-  
-  if (projectConnections) {
-    const message = `data: ${JSON.stringify(data)}\n\n`;
-    const encoder = new TextEncoder();
+export async function broadcastFragmentUpdate(projectId: string, data: any) {
+  try {
+    // Get all connection IDs for this project from Redis
+    const connectionIds = await sseManager.getConnectionIds(projectId);
     
-    projectConnections.forEach((controller) => {
-      try {
-        controller.enqueue(encoder.encode(message));
-      } catch (error) {
-        console.error('Failed to send SSE message:', error);
+    if (connectionIds.length > 0) {
+      const message = `data: ${JSON.stringify(data)}\n\n`;
+      const encoder = new TextEncoder();
+      
+      // Send to all connections that exist in this instance
+      for (const connectionId of connectionIds) {
+        const controller = getController(projectId, connectionId);
+        
+        if (controller) {
+          try {
+            controller.enqueue(encoder.encode(message));
+          } catch (error) {
+            console.error('Failed to send SSE message:', error);
+            // Remove failed connection
+            removeController(projectId, connectionId);
+            await sseManager.removeConnection(projectId, connectionId);
+          }
+        }
       }
-    });
+    }
+  } catch (error) {
+    console.error('Failed to broadcast fragment update:', error);
   }
 } 

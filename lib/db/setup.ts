@@ -178,13 +178,34 @@ async function createStripeWebhook(): Promise<string> {
   }
 }
 
+async function setupRealTimePreview(): Promise<string> {
+  console.log('Step 5: Setting up real-time preview panel updates...');
+  const enableRealTime = await question(
+    'Do you want to enable real-time preview panel updates? This requires Redis and ngrok. (y/n): '
+  );
+
+  if (enableRealTime.toLowerCase() === 'y') {
+    console.log('To enable real-time updates, you need to:');
+    console.log('1. Run: ./scripts/setup-dev.sh');
+    console.log('2. Copy the ngrok HTTPS URL from the terminal');
+    console.log('3. Enter it below');
+    console.log('');
+    console.log('🌐 Enter your ngrok HTTPS URL (or press Enter to skip): ');
+    const ngrokUrl = await question('Ngrok URL: ');
+    
+    return ngrokUrl || '';
+  }
+  
+  return '';
+}
+
 function generateAuthSecret(): string {
-  console.log('Step 5: Generating AUTH_SECRET...');
+  console.log('Step 6: Generating AUTH_SECRET...');
   return crypto.randomBytes(32).toString('hex');
 }
 
 async function writeEnvFile(envVars: Record<string, string>) {
-  console.log('Step 6: Writing environment variables to .env');
+  console.log('Step 7: Writing environment variables to .env');
   const envContent = Object.entries(envVars)
     .map(([key, value]) => `${key}=${value}`)
     .join('\n');
@@ -202,6 +223,7 @@ async function main() {
   const BASE_URL = 'http://localhost:3000';
   const AUTH_SECRET = generateAuthSecret();
   const AGENT_API_BASE_URL = 'http://localhost:8000';
+  const NGROK_URL = await setupRealTimePreview();
 
   await writeEnvFile({
     POSTGRES_URL,
@@ -210,6 +232,7 @@ async function main() {
     BASE_URL,
     AUTH_SECRET,
     AGENT_API_BASE_URL,
+    NGROK_URL,
   });
 
   console.log('🎉 Setup completed successfully!');
