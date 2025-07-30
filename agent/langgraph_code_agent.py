@@ -188,18 +188,19 @@ def read_files(file_paths: List[str], config: RunnableConfig) -> str:
         return error_msg
 
 @tool
-class TaskComplete(BaseModel):
+def task_complete(summary: str, files_created: List[str], completed: bool = True) -> str:
     """Mark the task as complete with a summary."""
-    summary: str = Field(description="Summary of what was accomplished")
-    files_created: List[str] = Field(description="List of files that were created or modified")
-    completed: bool = Field(default=True, description="Whether the task is complete")
+    print(f"🎯 TaskComplete called with summary: {summary}")
+    print(f"📁 Files created: {files_created}")
+    print(f"✅ Completed: {completed}")
+    return f"Task completed successfully. Summary: {summary}"
 
 # ========================
 # AGENT NODES
 # ========================
 
 # Collect all tools
-tools = [terminal, create_or_update_files, read_files, TaskComplete]
+tools = [terminal, create_or_update_files, read_files, task_complete]
 tools_by_name = {tool.name: tool for tool in tools}
 
 def llm_call(state: State):
@@ -261,6 +262,7 @@ def tool_handler(state: State):
     result_messages = []
     files_created = state.get("files_created", {}).copy()  # Get current files_created
     task_summary = state.get("task_summary", "")  # Get current task summary
+    task_complete = state.get("task_complete", False)  # Get current task complete status
     
     # Get the last message (should contain tool calls)
     last_message = state["messages"][-1]
@@ -307,8 +309,8 @@ def tool_handler(state: State):
                 except Exception as e:
                     print(f"⚠️ Warning: Could not track file creation: {e}")
             
-            # Handle TaskComplete tool
-            elif tool_name == "TaskComplete":
+            # Handle task_complete tool
+            elif tool_name == "task_complete":
                 try:
                     # Update task_complete status and capture summary
                     task_complete = tool_args.get("completed", True)
@@ -339,8 +341,8 @@ def tool_handler(state: State):
     return {
         "messages": result_messages,
         "files_created": files_created,
-        "task_complete": task_complete if 'task_complete' in locals() else state.get("task_complete", False),
-        "task_summary": task_summary if 'task_summary' in locals() else state.get("task_summary", "")
+        "task_complete": task_complete,
+        "task_summary": task_summary
     }
 
 
@@ -349,12 +351,15 @@ def should_continue(state: State) -> Literal["tool_handler", "__end__"]:
     """Decide whether to continue or end the conversation"""
     last_message = state["messages"][-1]
     
+    # If task is already complete, end the conversation
+    if state.get("task_complete", False):
+        return END
+    
+    # If there are tool calls, go to tool_handler
     if last_message.tool_calls:
-        for tool_call in last_message.tool_calls:
-            if tool_call["name"] == "TaskComplete":
-                return END
         return "tool_handler"
     
+    # If no tool calls, end the conversation
     return END
 
 # ========================

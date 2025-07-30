@@ -2,13 +2,17 @@
 
 import { Button } from '@/components/ui/button';
 import { Sparkles, Share2, Settings, Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useState } from 'react';
 import { createNewProject } from '@/app/api/chat/actions';
+import ShareDialog from './ShareDialog';
 
 const Header = () => {
   const router = useRouter();
+  const params = useParams();
+  const projectId = params?.projectId as string | undefined;
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
 
   const handleLogoClick = () => {
     router.push('/');
@@ -28,6 +32,12 @@ const Header = () => {
       console.error('Error creating new project:', error);
     } finally {
       setIsCreatingProject(false);
+    }
+  };
+
+  const handleShare = () => {
+    if (projectId) {
+      setShowShareCard(true);
     }
   };
 
@@ -69,10 +79,24 @@ const Header = () => {
           >
             <Settings className="w-4 h-4" />
           </Button>
-          <Button size="sm" className="bg-gradient-primary hover:opacity-90 cursor-pointer">
-            <Share2 className="w-4 h-4 mr-2" />
-            Share
-          </Button>
+          <div className="relative">
+            <Button 
+              size="sm" 
+              className="bg-gradient-primary hover:opacity-90 cursor-pointer"
+              onClick={handleShare}
+              disabled={!projectId}
+            >
+              <Share2 className="w-4 h-4 mr-2" />
+              Share
+            </Button>
+            
+            {showShareCard && projectId && (
+              <ShareDialog 
+                projectId={projectId} 
+                onClose={() => setShowShareCard(false)} 
+              />
+            )}
+          </div>
         </div>
       </div>
     </header>

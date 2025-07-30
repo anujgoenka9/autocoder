@@ -85,13 +85,7 @@ export async function sendChatMessage(content: string, projectId?: string) {
             // Agent successfully created the project
             const taskSummary = agentResult.data.task_summary || 'Project created successfully with the requested features.';
             
-            aiResponse = `🎉 Project created successfully! I've built your application based on your request: "${content}"
-
-📝 **What I Built**: ${taskSummary}
-
-🔗 **Sandbox URL**: ${agentResult.data.sandbox_url}
-📁 **Files Created**: ${Object.keys(agentResult.data.files_created || {}).join(', ') || 'Multiple files'}
-⏱️ **Execution Time**: ${agentResult.data.execution_time?.toFixed(2) || 'N/A'} seconds`;
+            aiResponse = taskSummary;
             
             sandboxUrl = agentResult.data.sandbox_url;
             filesCreated = agentResult.data.files_created;
@@ -155,13 +149,7 @@ Error: ${agentError instanceof Error ? agentError.message : 'Unknown error'}`;
             // Agent successfully updated the project
             const taskSummary = agentResult.data.task_summary || 'Project updated successfully with the requested changes.';
             
-            aiResponse = `🎉 Project updated successfully! I've made the changes you requested: "${content}"
-
-📝 **What I Updated**: ${taskSummary}
-
-🔗 **Sandbox URL**: ${agentResult.data.sandbox_url}
-📁 **Files Modified**: ${Object.keys(agentResult.data.files_created || {}).join(', ') || 'Multiple files'}
-⏱️ **Execution Time**: ${agentResult.data.execution_time?.toFixed(2) || 'N/A'} seconds`;
+            aiResponse = taskSummary;
             
             sandboxUrl = agentResult.data.sandbox_url;
             filesCreated = agentResult.data.files_created;

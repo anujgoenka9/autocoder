@@ -176,8 +176,8 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
 
         // If we have a sandbox URL, we could show it in a special way
         if (result.sandboxUrl) {
-          console.log('🎉 Project created with sandbox URL:', result.sandboxUrl);
-          console.log('📁 Files created:', result.filesCreated);
+          console.log('Project created with sandbox URL:', result.sandboxUrl);
+          console.log('Files created:', result.filesCreated);
         }
       } else {
         // Remove temp message and show error
@@ -301,27 +301,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
                     : 'bg-chat-ai border border-chat-border text-foreground'
                 }`}>
                   <div className="whitespace-pre-wrap">
-                    {message.content.split('\n').map((line, index) => {
-                      // Check if line contains a sandbox URL
-                      const sandboxUrlMatch = line.match(/🔗 \*\*Sandbox URL\*\*: (https?:\/\/[^\s]+)/);
-                      if (sandboxUrlMatch) {
-                        const url = sandboxUrlMatch[1];
-                        return (
-                          <div key={index} className="mb-2">
-                            <span>🔗 <strong>Sandbox URL</strong>: </span>
-                            <a
-                              href={url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-800 underline break-all"
-                            >
-                              {url}
-                            </a>
-                          </div>
-                        );
-                      }
-                      return <div key={index}>{line}</div>;
-                    })}
+                    {message.content}
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
