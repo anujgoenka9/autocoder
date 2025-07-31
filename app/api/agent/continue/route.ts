@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
       : 'http://localhost:3000';
-    const agentResponse = await fetch(`${baseUrl}/api/chat/continue`, {
+    const agentResponse = await fetch(`${baseUrl}/api/python/continue`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
