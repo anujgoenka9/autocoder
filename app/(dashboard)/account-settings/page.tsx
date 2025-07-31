@@ -156,7 +156,7 @@ function AccountFormWithData({ state }: { state: AccountState }) {
   );
 }
 
-export default function AccountSettingsPage() {
+function AccountSettingsContent() {
   const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
@@ -651,5 +651,20 @@ export default function AccountSettingsPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function AccountSettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-ai-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your account settings...</p>
+        </div>
+      </div>
+    }>
+      <AccountSettingsContent />
+    </Suspense>
   );
 } 
