@@ -15,6 +15,7 @@ This is a starter template for building a SaaS application using **Next.js** wit
 - Global middleware to protect logged-in routes
 - Local middleware to protect Server Actions or validate Zod schemas
 - Activity logging system for any user events
+- **AI Code Generation**: Intelligent agent that can create and modify Next.js projects using natural language
 
 ## Tech Stack
 
@@ -23,6 +24,7 @@ This is a starter template for building a SaaS application using **Next.js** wit
 - **ORM**: [Drizzle](https://orm.drizzle.team/)
 - **Payments**: [Stripe](https://stripe.com/)
 - **UI Library**: [shadcn/ui](https://ui.shadcn.com/)
+- **AI Agent**: [LangGraph](https://github.com/langchain-ai/langgraph) + [E2B](https://e2b.dev/) for code generation
 
 ## Getting Started
 
@@ -45,6 +47,18 @@ Use the included setup script to create your `.env` file:
 ```bash
 pnpm db:setup
 ```
+
+Set up your Python agent API keys in your `.env` file:
+
+```bash
+# Add these to your .env file
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+E2B_API_KEY=your_e2b_api_key_here
+```
+
+To get these API keys:
+- **OpenRouter**: Sign up at [openrouter.ai](https://openrouter.ai/) and get your API key
+- **E2B**: Sign up at [e2b.dev](https://e2b.dev/) and get your API key
 
 Run the database migrations and seed the database with a default user and team:
 
@@ -107,4 +121,7 @@ In your Vercel project settings (or during deployment), add all the necessary en
 3. `STRIPE_WEBHOOK_SECRET`: Use the webhook secret from the production webhook you created in step 1.
 4. `POSTGRES_URL`: Set this to your production database URL.
 5. `AUTH_SECRET`: Set this to a random string. `openssl rand -base64 32` will generate one.
+6. `OPENROUTER_API_KEY`: Your OpenRouter API key for the AI agent.
+7. `E2B_API_KEY`: Your E2B API key for code execution sandbox.
+8. `VERCEL_URL`: This is automatically set by Vercel during deployment.
 
