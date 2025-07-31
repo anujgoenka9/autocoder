@@ -91,14 +91,14 @@ async def root():
         "message": "Multi-Session Code Generation Agent API",
         "version": "1.0.0",
         "endpoints": {
-            "new_project": "POST /api/projects/new",
-            "continue_project": "POST /api/projects/continue", 
-            "stream_project": "POST /api/projects/stream",
+            "new_project": "POST /api/chat/new",
+            "continue_project": "POST /api/chat/continue", 
+            "stream_project": "POST /api/chat/stream",
             "health": "GET /api/"
         }
     }
 
-@app.post("/api/projects/new")
+@app.post("/api/chat/new")
 async def create_new_project(request: NewProjectRequest, background_tasks: BackgroundTasks):
     """Start a new project"""
     start_time = datetime.now()
@@ -152,7 +152,7 @@ async def create_new_project(request: NewProjectRequest, background_tasks: Backg
             error=str(e)
         )
 
-@app.post("/api/projects/continue")
+@app.post("/api/chat/continue")
 async def continue_existing_project(request: ContinueProjectRequest):
     """Continue working on an existing project"""
     start_time = datetime.now()
@@ -216,7 +216,7 @@ async def continue_existing_project(request: ContinueProjectRequest):
             error=str(e)
         )
 
-@app.post("/api/projects/stream")
+@app.post("/api/chat/stream")
 async def stream_project_execution(request: ContinueProjectRequest):
     """Stream project execution in real-time (for frontend progress updates)"""
     

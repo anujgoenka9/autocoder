@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call the Python API function directly
-    const agentResponse = await fetch(`/api/projects/new`, {
+    const agentResponse = await fetch(`/api/chat/new`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
