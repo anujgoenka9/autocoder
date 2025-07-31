@@ -21,5 +21,5 @@ source .venv/bin/activate
 
 # Change to api directory and start the FastAPI server
 echo "🚀 Starting FastAPI server on port 8000..."
-cd app/api
+cd api
 PYTHONPATH=$(pwd) uvicorn index:app --reload --host 127.0.0.1 --port 8000 
