@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
     // Get the Python API URL
     const pythonApiUrl = process.env.NODE_ENV === 'development' 
       ? 'http://127.0.0.1:8000/api/agent/new'
-      : `${process.env.VERCEL_URL || 'http://localhost:3000'}/api/agent/new`;
+      : `https://${req.headers.get('host')}/api/agent/new`;
     
     // Forward the request to the Python API
     const response = await fetch(pythonApiUrl, {
