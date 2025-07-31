@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { broadcastFragmentUpdate } from '@/app/api/events/fragments/[projectId]/route';
+import { broadcastFragmentUpdate } from '@/lib/sse-utils';
 
 // This endpoint receives webhook notifications from the database trigger
 // when fragments are inserted or updated
