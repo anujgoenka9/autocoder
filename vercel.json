@@ -1,0 +1,7 @@
+{
+    "functions": {
+      "agent/api_server.py": {
+        "excludeFiles": "{.next,.git,node_modules}/**"
+      }
+    }
+  }
