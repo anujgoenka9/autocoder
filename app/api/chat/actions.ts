@@ -66,7 +66,10 @@ export async function sendChatMessage(content: string, projectId?: string) {
     if (isNewProject) {
       // For new projects, call the agent API
       try {
-        const agentResponse = await fetch(`${process.env.BASE_URL || 'http://localhost:3000'}/api/agent`, {
+        const baseUrl = process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : (process.env.BASE_URL || 'http://localhost:3000');
+        const agentResponse = await fetch(`${baseUrl}/api/agent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -129,7 +132,10 @@ Error: ${agentError instanceof Error ? agentError.message : 'Unknown error'}`;
           .map(msg => `${msg.role}: ${msg.content}`)
           .join('\n');
         
-        const agentResponse = await fetch(`${process.env.BASE_URL || 'http://localhost:3000'}/api/agent/continue`, {
+        const baseUrl = process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : (process.env.BASE_URL || 'http://localhost:3000');
+        const agentResponse = await fetch(`${baseUrl}/api/agent/continue`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
