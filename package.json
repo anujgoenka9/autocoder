@@ -2,6 +2,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:agent": "./scripts/start-agent.sh",
+    "dev:full": "concurrently \"npm run dev\" \"npm run dev:agent\"",
     "build": "next build",
     "start": "next start",
     "db:setup": "npx tsx lib/db/setup.ts",
@@ -45,5 +47,8 @@
     "typescript": "^5.8.3",
     "uuid": "^11.1.0",
     "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0"
   }
 }

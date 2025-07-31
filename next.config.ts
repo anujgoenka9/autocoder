@@ -9,11 +9,11 @@ const nextConfig: NextConfig = {
   rewrites: async () => {
     return [
       {
-        source: "/api/python/:path*",
+        source: "/api/agent/:path*",
         destination:
           process.env.NODE_ENV === "development"
-            ? "http://127.0.0.1:8000/api/python/:path*"
-            : "/api/",
+            ? "http://127.0.0.1:8000/api/agent/:path*"
+            : "/api/agent/:path*",
       },
     ];
   },

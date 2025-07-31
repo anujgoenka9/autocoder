@@ -14,7 +14,7 @@ import json
 from datetime import datetime
 from langchain_core.messages import HumanMessage
 
-from .utils.agent import (
+from utils.agent import (
     State, 
     workflow,
     ProjectSession
@@ -84,21 +84,21 @@ app.add_middleware(
 # API ENDPOINTS
 # ========================
 
-@app.get("/api/")
+@app.get("/api/agent")
 async def root():
     """Health check endpoint"""
     return {
         "message": "Multi-Session Code Generation Agent API",
         "version": "1.0.0",
         "endpoints": {
-            "new_project": "POST /api/python/new",
-            "continue_project": "POST /api/python/continue", 
-            "stream_project": "POST /api/python/stream",
-            "health": "GET /api/"
+            "new_project": "POST /api/agent/new",
+            "continue_project": "POST /api/agent/continue", 
+            "stream_project": "POST /api/agent/stream",
+            "health": "GET /api/agent/health"
         }
     }
 
-@app.post("/api/python/new")
+@app.post("/api/agent/new")
 async def create_new_project(request: NewProjectRequest, background_tasks: BackgroundTasks):
     """Start a new project"""
     start_time = datetime.now()
@@ -152,7 +152,7 @@ async def create_new_project(request: NewProjectRequest, background_tasks: Backg
             error=str(e)
         )
 
-@app.post("/api/python/continue")
+@app.post("/api/agent/continue")
 async def continue_existing_project(request: ContinueProjectRequest):
     """Continue working on an existing project"""
     start_time = datetime.now()
@@ -216,7 +216,7 @@ async def continue_existing_project(request: ContinueProjectRequest):
             error=str(e)
         )
 
-@app.post("/api/python/stream")
+@app.post("/api/agent/stream")
 async def stream_project_execution(request: ContinueProjectRequest):
     """Stream project execution in real-time (for frontend progress updates)"""
     
@@ -275,7 +275,7 @@ async def stream_project_execution(request: ContinueProjectRequest):
         }
     )
 
-@app.get("/api/health")
+@app.get("/api/agent/health")
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "service": "multi-session-agent", "timestamp": datetime.now().isoformat()} 

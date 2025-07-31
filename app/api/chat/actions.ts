@@ -66,39 +66,39 @@ export async function sendChatMessage(content: string, projectId?: string) {
     if (isNewProject) {
       // For new projects, call the agent API
       try {
-        const baseUrl = process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : (process.env.BASE_URL || 'http://localhost:3000');
-        const agentResponse = await fetch(`${baseUrl}/api/agent`, {
+        const baseUrl = process.env.NODE_ENV === 'development' 
+          ? 'http://127.0.0.1:8000' 
+          : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+        const agentResponse = await fetch(`${baseUrl}/api/agent/new`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             task: content,
-            projectId: project.id,
-            userId: currentUser.id.toString(), // Use the real user ID from database
+            project_id: project.id,
+            user_id: currentUser.id.toString(), // Use the real user ID from database
           }),
         });
 
         if (agentResponse.ok) {
           const agentResult = await agentResponse.json();
           
-          if (agentResult.success && agentResult.data.success) {
+          if (agentResult.success) {
             // Agent successfully created the project
-            const taskSummary = agentResult.data.task_summary || 'Project created successfully with the requested features.';
+            const taskSummary = agentResult.task_summary || 'Project created successfully with the requested features.';
             
             aiResponse = taskSummary;
             
-            sandboxUrl = agentResult.data.sandbox_url;
-            filesCreated = agentResult.data.files_created;
+            sandboxUrl = agentResult.sandbox_url;
+            filesCreated = agentResult.files_created;
             
             // Save or update fragment with file contents
             try {
               await createOrUpdateFragment(
                 project.id,
-                agentResult.data.sandbox_url,
-                agentResult.data.files_created || {}
+                agentResult.sandbox_url,
+                agentResult.files_created || {}
               );
             } catch (fragmentError) {
               console.error('Failed to save fragment:', fragmentError);
@@ -106,7 +106,7 @@ export async function sendChatMessage(content: string, projectId?: string) {
             }
           } else {
             // Agent failed but we have an error message
-            aiResponse = `❌ I encountered an issue while creating your project: ${agentResult.data.error || 'Unknown error'}
+            aiResponse = `❌ I encountered an issue while creating your project: ${agentResult.error || 'Unknown error'}
 
 Please try again with a different description or let me know if you need help troubleshooting.`;
           }
@@ -132,9 +132,9 @@ Error: ${agentError instanceof Error ? agentError.message : 'Unknown error'}`;
           .map(msg => `${msg.role}: ${msg.content}`)
           .join('\n');
         
-        const baseUrl = process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : (process.env.BASE_URL || 'http://localhost:3000');
+        const baseUrl = process.env.NODE_ENV === 'development' 
+          ? 'http://127.0.0.1:8000' 
+          : (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
         const agentResponse = await fetch(`${baseUrl}/api/agent/continue`, {
           method: 'POST',
           headers: {
@@ -142,30 +142,30 @@ Error: ${agentError instanceof Error ? agentError.message : 'Unknown error'}`;
           },
           body: JSON.stringify({
             task: content,
-            projectId: project.id,
-            userId: currentUser.id.toString(),
-            conversationHistory: conversationHistory,
+            project_id: project.id,
+            user_id: currentUser.id.toString(),
+            conversation_history: conversationHistory,
           }),
         });
 
         if (agentResponse.ok) {
           const agentResult = await agentResponse.json();
           
-          if (agentResult.success && agentResult.data.success) {
+          if (agentResult.success) {
             // Agent successfully updated the project
-            const taskSummary = agentResult.data.task_summary || 'Project updated successfully with the requested changes.';
+            const taskSummary = agentResult.task_summary || 'Project updated successfully with the requested changes.';
             
             aiResponse = taskSummary;
             
-            sandboxUrl = agentResult.data.sandbox_url;
-            filesCreated = agentResult.data.files_created;
+            sandboxUrl = agentResult.sandbox_url;
+            filesCreated = agentResult.files_created;
             
             // Save or update fragment with file contents
             try {
               await createOrUpdateFragment(
                 project.id,
-                agentResult.data.sandbox_url,
-                agentResult.data.files_created || {}
+                agentResult.sandbox_url,
+                agentResult.files_created || {}
               );
             } catch (fragmentError) {
               console.error('Failed to save fragment:', fragmentError);
@@ -173,7 +173,7 @@ Error: ${agentError instanceof Error ? agentError.message : 'Unknown error'}`;
             }
           } else {
             // Agent failed but we have an error message
-            aiResponse = `❌ I encountered an issue while updating your project: ${agentResult.data.error || 'Unknown error'}
+            aiResponse = `❌ I encountered an issue while updating your project: ${agentResult.error || 'Unknown error'}
 
 Please try again with a different description or let me know if you need help troubleshooting.`;
           }

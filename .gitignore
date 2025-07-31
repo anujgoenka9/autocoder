@@ -41,6 +41,9 @@ postgres_data/
 .env*.local
 
 #python-agent
-agent/__pycache__
+.venv
+__pycache__
 
-ai-sdk-preview-python-streaming-main
+/agent
+
+/ai-sdk-preview-python-streaming-main
