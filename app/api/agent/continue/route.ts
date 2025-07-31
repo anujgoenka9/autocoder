@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Call the Python API function directly
-    const agentResponse = await fetch(`/api/chat/continue`, {
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000';
+    const agentResponse = await fetch(`${baseUrl}/api/chat/continue`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
