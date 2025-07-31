@@ -12,8 +12,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call the Python API function directly (handled by Next.js rewrites)
-    const agentResponse = await fetch(`${request.nextUrl.origin}/api/projects/new`, {
+    // Call the Python API function directly
+    const agentResponse = await fetch(`/api/projects/new`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
