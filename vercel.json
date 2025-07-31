@@ -1,6 +1,6 @@
 {
     "functions": {
-      "agent/api_server.py": {
+      "api/**": {
         "excludeFiles": "{.next,.git,node_modules}/**"
       }
     }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const AGENT_API_BASE_URL = process.env.AGENT_API_BASE_URL || 'http://localhost:8000';
+const AGENT_API_BASE_URL = process.env.AGENT_API_BASE_URL || `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000'}`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,8 +14,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Call the agent API
-    const agentResponse = await fetch(`${AGENT_API_BASE_URL}/projects/new`, {
+    // Call the agent API (now a Vercel function)
+    const agentResponse = await fetch(`${AGENT_API_BASE_URL}/api/projects/new`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
