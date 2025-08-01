@@ -180,7 +180,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
       
       // Use direct API calls - Next.js rewrites are causing proxy issues in development
       // Use relative paths - Next.js rewrites will handle the routing
-      const apiUrl = `/api/agent/${isNewProject ? 'new' : 'continue'}`;
+      const apiUrl = `${process.env.AGENT_API_BASE_URL}/api/agent/${isNewProject ? 'new' : 'continue'}`;
       
       // Check if user is authenticated
       if (!user) {
