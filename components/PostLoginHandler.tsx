@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createNewProject, sendChatMessage } from '@/app/api/chat/actions';
+import { createNewProject } from '@/app/api/chat/actions';
 
 const PostLoginHandler = () => {
   const router = useRouter();
@@ -23,9 +23,9 @@ const PostLoginHandler = () => {
         try {
           const result = await createNewProject();
           if (result.success && result.projectId) {
-            // If there was a stored prompt, send it as the first message
+            // If there was a stored prompt, store it to prefill the chat input
             if (storedPrompt) {
-              await sendChatMessage(storedPrompt, result.projectId);
+              localStorage.setItem('prefillMessage', storedPrompt);
             }
             
             router.replace(`/projects/${result.projectId}`);

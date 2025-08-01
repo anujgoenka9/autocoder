@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { Send, Bot, User, Edit3, Check, X } from 'lucide-react';
-import { initializeChat, sendChatMessage, updateProjectNameAction, loadProjectById } from '@/app/api/chat/actions';
+import { updateProjectNameAction, loadProjectById, saveChatMessageToDatabase } from '@/app/api/chat/actions';
+import { useUser } from '@/hooks/useUser';
 
 interface Message {
   id: string;
@@ -35,6 +36,9 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
+  
+  // Get current user
+  const { user, isLoading: isLoadingUser } = useUser();
 
   const generateMessageId = () => {
     messageIdCounter.current += 1;
@@ -68,6 +72,25 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
 
     loadChatHistory();
   }, [projectId, router]);
+
+  // Handle prefill message from suggestion chat
+  useEffect(() => {
+    if (!isLoading && !isLoadingUser && user && messages.length === 0) {
+      const prefillMessage = localStorage.getItem('prefillMessage');
+      if (prefillMessage) {
+        // Clear the stored message
+        localStorage.removeItem('prefillMessage');
+        // Prefill the input and send automatically after a short delay
+        setInput(prefillMessage);
+        // Send after everything is loaded
+        const timer = setTimeout(() => {
+          sendMessage(prefillMessage);
+        }, 500); // Small delay to ensure everything is ready
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isLoading, isLoadingUser, user, messages.length]);
 
   // Focus edit input when editing starts
   useEffect(() => {
@@ -134,7 +157,12 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
   };
 
   const sendMessage = async (messageContent: string) => {
-    if (!messageContent.trim() || isTyping) return;
+    if (!messageContent.trim() || isTyping) {
+      return;
+    }
+
+    // Check if this is a new project BEFORE adding the temporary message
+    const isNewProject = !currentProjectId.current || messages.length === 0;
 
     // Add user message immediately to UI
     const tempUserMessage: Message = {
@@ -149,45 +177,155 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
     setIsTyping(true);
 
     try {
-      const result = await sendChatMessage(messageContent, currentProjectId.current || undefined);
       
-      if (result.success) {
-        // Update project ID if this was the first message
-        if (!currentProjectId.current && result.projectId) {
-          currentProjectId.current = result.projectId;
-          // Redirect to the new project's route
-          router.replace(`/projects/${result.projectId}`);
-          // Update project name if this was the first message
-          if (messages.length === 0) {
-            const newName = messageContent.length > 50 ? messageContent.substring(0, 47) + '...' : messageContent;
-            setProjectName(newName);
+      // Use direct API calls - Next.js rewrites are causing proxy issues in development
+      const apiUrl = process.env.NODE_ENV === 'development' 
+        ? `http://127.0.0.1:8000/api/agent/${isNewProject ? 'new' : 'continue'}`
+        : `/api/agent/${isNewProject ? 'new' : 'continue'}`;
+      
+      // Check if user is authenticated
+      if (!user) {
+        console.error('User not authenticated');
+        setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
+        // Show error message to user
+        const errorMessage: Message = {
+          id: generateMessageId(),
+          content: '❌ You need to be signed in to send messages. Please refresh the page and try again.',
+          type: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        return;
+      }
+
+      // Prepare request body
+      const requestBody = isNewProject ? {
+        task: messageContent,
+        project_id: currentProjectId.current || `project-${Date.now()}`,
+        user_id: user.id.toString(),
+      } : {
+        task: messageContent,
+        project_id: currentProjectId.current!,
+        user_id: user.id.toString(),
+        conversation_history: messages.map(msg => `${msg.type}: ${msg.content}`).join('\n'),
+      };
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.success) {
+          // Update project ID if this was the first message
+          if (!currentProjectId.current && result.project_id) {
+            currentProjectId.current = result.project_id;
+            // Redirect to the new project's route
+            router.replace(`/projects/${result.project_id}`);
+            // Update project name if this was the first message
+            const currentMessages = messages.filter(msg => msg.id !== tempUserMessage.id);
+            if (currentMessages.length === 0) {
+              const newName = messageContent.length > 50 ? messageContent.substring(0, 47) + '...' : messageContent;
+              setProjectName(newName);
+            }
           }
-        }
 
-        // Replace temp user message with real one and add AI response
-        setMessages(prev => {
-          const withoutTemp = prev.filter(msg => msg.id !== tempUserMessage.id);
-          return [
-            ...withoutTemp,
-            result.userMessage!,
-            result.aiMessage!
-          ];
-        });
+          // Ensure we have a project ID for database operations
+          const projectIdForDb = currentProjectId.current || result.project_id;
+          if (!projectIdForDb) {
+            console.error('No project ID available for database operations');
+            const aiMessage: Message = {
+              id: generateMessageId(),
+              content: result.task_summary || 'Project created successfully!',
+              type: 'ai',
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, aiMessage]);
+            return;
+          }
 
-        // If we have a sandbox URL, we could show it in a special way
-        if (result.sandboxUrl) {
-          console.log('Project created with sandbox URL:', result.sandboxUrl);
-          console.log('Files created:', result.filesCreated);
+          // Save messages to database and get proper message IDs
+          const dbResult = await saveChatMessageToDatabase(
+            projectIdForDb,
+            messageContent,
+            result.task_summary || 'Project created successfully!',
+            result.sandbox_url,
+            result.files_created
+          );
+
+          if (dbResult.success) {
+            // Keep the temp user message and add the AI response with real database ID
+            const aiMessage: Message = {
+              id: dbResult.aiMessage!.id,
+              content: result.task_summary || 'Project created successfully!',
+              type: 'ai',
+              timestamp: dbResult.aiMessage!.timestamp,
+            };
+            setMessages(prev => [...prev, aiMessage]);
+          } else {
+            // If database save failed, keep the temp messages but log the error
+            console.error('Failed to save to database:', dbResult.error);
+            const aiMessage: Message = {
+              id: generateMessageId(),
+              content: result.task_summary || 'Project created successfully!',
+              type: 'ai',
+              timestamp: new Date()
+            };
+            setMessages(prev => [...prev, aiMessage]);
+          }
+
+          // If we have a sandbox URL, we could show it in a special way
+          if (result.sandbox_url) {
+            console.log('Project created with sandbox URL:', result.sandbox_url);
+            console.log('Files created:', result.files_created);
+          }
+        } else {
+          // Remove temp message and show error
+          setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
+          console.error('Failed to send message:', result.error);
+          
+          // Show error message to user
+          const errorMessage: Message = {
+            id: generateMessageId(),
+            content: `❌ ${result.error || 'Failed to process your request. Please try again.'}`,
+            type: 'ai',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, errorMessage]);
         }
       } else {
         // Remove temp message and show error
         setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
-        console.error('Failed to send message:', result.error);
+        const errorText = await response.text();
+        console.error('API error:', errorText);
+        
+        // Show error message to user
+        const errorMessage: Message = {
+          id: generateMessageId(),
+          content: `❌ API Error: ${response.status} ${response.statusText}. Please try again.`,
+          type: 'ai',
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, errorMessage]);
       }
     } catch (error) {
       // Remove temp message on error
       setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
       console.error('Error sending message:', error);
+      
+      // Show error message to user
+      const errorMessage: Message = {
+        id: generateMessageId(),
+        content: `❌ Network Error: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        type: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
     }
@@ -197,11 +335,11 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
     sendMessage(input);
   };
 
-  if (isLoading) {
+  if (isLoading || isLoadingUser) {
     return (
       <div className="flex flex-col h-full bg-gradient-chat">
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-muted-foreground">Loading chat history...</div>
+          <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
     );
@@ -212,6 +350,16 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
       <div className="flex flex-col h-full bg-gradient-chat">
         <div className="flex-1 flex items-center justify-center">
           <div className="text-muted-foreground">Loading project...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col h-full bg-gradient-chat">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-muted-foreground">Please sign in to continue.</div>
         </div>
       </div>
     );

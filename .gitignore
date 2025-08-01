@@ -47,3 +47,4 @@ __pycache__
 /agent
 
 /ai-sdk-preview-python-streaming-main
+/vercel examples main python-nextjs-flask

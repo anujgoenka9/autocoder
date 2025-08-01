@@ -7,19 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, Lightbulb, Sparkles } from 'lucide-react';
-import { createNewProject, sendChatMessage } from '@/app/api/chat/actions';
-import useSWR from 'swr';
-import { User } from '@/lib/db/schema';
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { createNewProject } from '@/app/api/chat/actions';
+import { useUser } from '@/hooks/useUser';
 
 const SuggestionChat = () => {
   const [input, setInput] = useState('');
   const [isStartingProject, setIsStartingProject] = useState(false);
   const router = useRouter();
   
-  // Check if user is authenticated
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  // Get current user
+  const { user } = useUser();
   const isAuthenticated = !!user;
 
   const suggestions = [
@@ -54,10 +51,10 @@ const SuggestionChat = () => {
       const projectResult = await createNewProject();
       
       if (projectResult.success && projectResult.projectId) {
-        // Send the initial message to the new project
-        await sendChatMessage(input.trim(), projectResult.projectId);
+        // Store the user's input to prefill the chat input
+        localStorage.setItem('prefillMessage', input.trim());
         
-        // Navigate to the new project
+        // Navigate to the new project - ChatInterface will handle the first message
         router.push(`/projects/${projectResult.projectId}`);
       } else {
         console.error('Failed to create project:', projectResult.error);
