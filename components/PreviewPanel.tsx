@@ -82,18 +82,15 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
       try {
         const data = JSON.parse(event.data);
         
-        if (data.type === 'fragment_updated') {
-          // Reload fragment data
-          const result = await getFragmentByProjectId(projectId);
-          if (result.success && result.fragment) {
-            setFragment(result.fragment);
-            setHasFragment(true);
-            // Keep the current active file if it still exists
-            const files = result.fragment.files;
-            if (files && Object.keys(files).length > 0) {
-              if (!activeFile || !files[activeFile]) {
-                setActiveFile(Object.keys(files)[0]);
-              }
+        if (data.type === 'fragment_updated' && data.fragment) {
+          // Optimization 1: Use fragment data directly from SSE message
+          setFragment(data.fragment);
+          setHasFragment(true);
+          // Keep the current active file if it still exists
+          const files = data.fragment.files;
+          if (files && Object.keys(files).length > 0) {
+            if (!activeFile || !files[activeFile]) {
+              setActiveFile(Object.keys(files)[0]);
             }
           }
         }

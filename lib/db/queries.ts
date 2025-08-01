@@ -304,37 +304,23 @@ export async function createOrUpdateFragment(projectId: string, sandboxUrl: stri
     throw new Error('Project not found or access denied');
   }
 
-  // Check if fragment already exists
-  const existingFragment = await db
-    .select()
-    .from(fragments)
-    .where(eq(fragments.projectId, projectId))
-    .limit(1);
-
-  if (existingFragment.length > 0) {
-    // Update existing fragment
-    const [updatedFragment] = await db
-      .update(fragments)
-      .set({
+  // Optimization 2: Use upsert instead of separate check and insert/update
+  const [fragment] = await db
+    .insert(fragments)
+    .values({
+      projectId,
+      sandboxUrl,
+      files
+    })
+    .onConflictDoUpdate({
+      target: fragments.projectId,
+      set: {
         sandboxUrl,
         files,
         updatedAt: new Date()
-      })
-      .where(eq(fragments.projectId, projectId))
-      .returning();
+      }
+    })
+    .returning();
 
-    return updatedFragment;
-  } else {
-    // Create new fragment
-    const [newFragment] = await db
-      .insert(fragments)
-      .values({
-        projectId,
-        sandboxUrl,
-        files
-      })
-      .returning();
-
-    return newFragment;
-  }
+  return fragment;
 }
