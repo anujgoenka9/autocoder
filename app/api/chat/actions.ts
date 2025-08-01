@@ -107,7 +107,7 @@ export async function saveChatMessageToDatabase(
 ) {
   try {
     // Import the necessary functions
-    const { saveMessage, createOrUpdateFragment } = await import('@/lib/db/queries');
+    const { saveMessage, upsertFragment } = await import('@/lib/db/queries');
     const { MessageRole } = await import('@/lib/db/schema');
     
     // Save user message
@@ -119,7 +119,7 @@ export async function saveChatMessageToDatabase(
     // Save or update fragment if we have sandbox URL and files
     if (sandboxUrl && filesCreated) {
       try {
-        await createOrUpdateFragment(projectId, sandboxUrl, filesCreated);
+        await upsertFragment(projectId, sandboxUrl, filesCreated);
       } catch (fragmentError) {
         console.error('Failed to save fragment:', fragmentError);
         // Don't fail the entire request if fragment saving fails

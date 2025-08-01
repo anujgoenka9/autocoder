@@ -26,22 +26,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send fragment data directly in SSE message (Optimization 1 & 4)
-    await broadcastFragmentUpdate(project_id, {
-      type: 'fragment_updated',
-      projectId: project_id,
-      fragmentId: fragment_id,
-      fragment: {
-        id: fragment_id,
+    // Add a small delay to ensure SSE connection is established
+    setTimeout(async () => {
+      await broadcastFragmentUpdate(project_id, {
+        type: 'fragment_updated',
         projectId: project_id,
-        sandboxUrl: record.sandbox_url,
-        files: record.files,
-        createdAt: record.created_at,
-        updatedAt: record.updated_at,
-      },
-      timestamp: new Date().toISOString(),
-      operation: type
-    });
+        fragmentId: fragment_id,
+        fragment: {
+          id: record.id,
+          projectId: record.project_id,
+          sandboxUrl: record.sandbox_url,
+          files: record.files,
+          createdAt: record.created_at,
+          updatedAt: record.updated_at,
+        },
+        timestamp: new Date().toISOString(),
+        operation: type
+      });
+    }, 100);
 
     return NextResponse.json({ 
       success: true, 

@@ -287,7 +287,7 @@ export async function getFragmentByProjectId(projectId: string) {
   return fragment.length > 0 ? fragment[0] : null;
 }
 
-export async function createOrUpdateFragment(projectId: string, sandboxUrl: string, files: Record<string, string>) {
+export async function upsertFragment(projectId: string, sandboxUrl: string, files: Record<string, string>) {
   const user = await getUser();
   if (!user) {
     throw new Error('User not authenticated');
@@ -304,7 +304,7 @@ export async function createOrUpdateFragment(projectId: string, sandboxUrl: stri
     throw new Error('Project not found or access denied');
   }
 
-  // Optimization 2: Use upsert instead of separate check and insert/update
+  // Use upsert instead of separate check and insert/update
   const [fragment] = await db
     .insert(fragments)
     .values({
@@ -323,4 +323,10 @@ export async function createOrUpdateFragment(projectId: string, sandboxUrl: stri
     .returning();
 
   return fragment;
+}
+
+// Keep the old function for backward compatibility but mark as deprecated
+export async function createOrUpdateFragment(projectId: string, sandboxUrl: string, files: Record<string, string>) {
+  console.warn('createOrUpdateFragment is deprecated, use upsertFragment instead');
+  return upsertFragment(projectId, sandboxUrl, files);
 }

@@ -83,7 +83,7 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
         const data = JSON.parse(event.data);
         
         if (data.type === 'fragment_updated' && data.fragment) {
-          // Optimization 1: Use fragment data directly from SSE message
+          // Use fragment data directly from SSE message instead of fetching from database
           setFragment(data.fragment);
           setHasFragment(true);
           // Keep the current active file if it still exists
