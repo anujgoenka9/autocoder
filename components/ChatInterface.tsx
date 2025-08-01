@@ -210,6 +210,9 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
         conversation_history: messages.map(msg => `${msg.type}: ${msg.content}`).join('\n'),
       };
       
+      console.log('Making API request to:', apiUrl);
+      console.log('Request body:', requestBody);
+      
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -217,6 +220,9 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
         },
         body: JSON.stringify(requestBody),
       });
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
 
       if (response.ok) {
         const result = await response.json();
