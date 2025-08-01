@@ -6,14 +6,22 @@ let redis: Redis | null = null;
 export function getRedisClient(): Redis | null {
   if (!redis) {
     try {
-      redis = new Redis({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD,
-        db: parseInt(process.env.REDIS_DB || '0'),
-        maxRetriesPerRequest: 3,
-        lazyConnect: true, // Don't connect immediately
-      });
+      // Support both REDIS_URL and individual parameters
+      if (process.env.REDIS_URL) {
+        redis = new Redis(process.env.REDIS_URL, {
+          maxRetriesPerRequest: 3,
+          lazyConnect: true, // Don't connect immediately
+        });
+      } else {
+        redis = new Redis({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: parseInt(process.env.REDIS_PORT || '6379'),
+          password: process.env.REDIS_PASSWORD,
+          db: parseInt(process.env.REDIS_DB || '0'),
+          maxRetriesPerRequest: 3,
+          lazyConnect: true, // Don't connect immediately
+        });
+      }
 
       redis.on('error', (error) => {
         console.error('Redis connection error:', error);
@@ -25,8 +33,10 @@ export function getRedisClient(): Redis | null {
       });
 
       // Test connection
-      redis.ping().catch(() => {
-        console.warn('Redis not available, falling back to in-memory storage');
+      redis.ping().then(() => {
+        console.log('✅ Redis ping successful');
+      }).catch((error) => {
+        console.warn('❌ Redis ping failed, falling back to in-memory storage:', error.message);
         redis = null;
       });
     } catch (error) {
