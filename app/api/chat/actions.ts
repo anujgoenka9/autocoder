@@ -148,4 +148,71 @@ export async function saveChatMessageToDatabase(
       error: 'Failed to save message to database',
     };
   }
+}
+
+export async function sendMessageToAgent(
+  messageContent: string,
+  projectId: string | null,
+  userId: string,
+  conversationHistory: Array<{ type: string; content: string }> = []
+) {
+  try {
+    const isNewProject = !projectId || conversationHistory.length === 0;
+    const agentApiUrl = process.env.AGENT_API_BASE_URL;
+    
+    if (!agentApiUrl) {
+      throw new Error('AGENT_API_BASE_URL environment variable is not set');
+    }
+
+    // Ensure the URL has a protocol
+    const baseUrl = agentApiUrl.startsWith('http') ? agentApiUrl : `https://${agentApiUrl}`;
+    const apiUrl = `${baseUrl}/api/agent/${isNewProject ? 'new' : 'continue'}`;
+    
+    // Prepare request body
+    const requestBody = isNewProject ? {
+      task: messageContent,
+      project_id: projectId || `project-${Date.now()}`,
+      user_id: userId,
+    } : {
+      task: messageContent,
+      project_id: projectId!,
+      user_id: userId,
+      conversation_history: conversationHistory.map(msg => `${msg.type}: ${msg.content}`).join('\n'),
+    };
+    
+    console.log('Making API request to:', apiUrl);
+    console.log('Request body:', requestBody);
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+    
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      throw new Error(`Agent API responded with status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(`Agent API returned error: ${result.error || 'Unknown error'}`);
+    }
+    
+    return {
+      success: true,
+      data: result,
+      projectId: result.project_id || projectId,
+    };
+  } catch (error) {
+    console.error('Failed to send message to agent:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send message to agent',
+    };
+  }
 } 

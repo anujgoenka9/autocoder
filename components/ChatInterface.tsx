@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { Send, Bot, User, Edit3, Check, X } from 'lucide-react';
-import { updateProjectNameAction, loadProjectById, saveChatMessageToDatabase } from '@/app/api/chat/actions';
+import { updateProjectNameAction, loadProjectById, saveChatMessageToDatabase, sendMessageToAgent } from '@/app/api/chat/actions';
 import { useUser } from '@/hooks/useUser';
 
 interface Message {
@@ -177,11 +177,6 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
     setIsTyping(true);
 
     try {
-      
-      // Use direct API calls - Next.js rewrites are causing proxy issues in development
-      // Use relative paths - Next.js rewrites will handle the routing
-      const apiUrl = `${process.env.AGENT_API_BASE_URL}/api/agent/${isNewProject ? 'new' : 'continue'}`;
-      
       // Check if user is authenticated
       if (!user) {
         console.error('User not authenticated');
@@ -197,122 +192,92 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
         return;
       }
 
-      // Prepare request body
-      const requestBody = isNewProject ? {
-        task: messageContent,
-        project_id: currentProjectId.current || `project-${Date.now()}`,
-        user_id: user.id.toString(),
-      } : {
-        task: messageContent,
-        project_id: currentProjectId.current!,
-        user_id: user.id.toString(),
-        conversation_history: messages.map(msg => `${msg.type}: ${msg.content}`).join('\n'),
-      };
+      // Send message to agent using server action
+      const agentResult = await sendMessageToAgent(
+        messageContent,
+        currentProjectId.current,
+        user.id.toString(),
+        messages.map(msg => ({ type: msg.type, content: msg.content }))
+      );
+
+      if (!agentResult.success) {
+        throw new Error(agentResult.error);
+      }
+
+      const result = agentResult.data;
       
-      console.log('Making API request to:', apiUrl);
-      console.log('Request body:', requestBody);
-      
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      });
-      
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
-      if (response.ok) {
-        const result = await response.json();
-        
-        if (result.success) {
-          // Update project ID if this was the first message
-          if (!currentProjectId.current && result.project_id) {
-            currentProjectId.current = result.project_id;
-            // Redirect to the new project's route
-            router.replace(`/projects/${result.project_id}`);
-            // Update project name if this was the first message
-            const currentMessages = messages.filter(msg => msg.id !== tempUserMessage.id);
-            if (currentMessages.length === 0) {
-              const newName = messageContent.length > 50 ? messageContent.substring(0, 47) + '...' : messageContent;
-              setProjectName(newName);
-            }
+      if (result.success) {
+        // Update project ID if this was the first message
+        if (!currentProjectId.current && result.project_id) {
+          currentProjectId.current = result.project_id;
+          // Redirect to the new project's route
+          router.replace(`/projects/${result.project_id}`);
+          // Update project name if this was the first message
+          const currentMessages = messages.filter(msg => msg.id !== tempUserMessage.id);
+          if (currentMessages.length === 0) {
+            const newName = messageContent.length > 50 ? messageContent.substring(0, 47) + '...' : messageContent;
+            setProjectName(newName);
           }
+        }
 
-          // Ensure we have a project ID for database operations
-          const projectIdForDb = currentProjectId.current || result.project_id;
-          if (!projectIdForDb) {
-            console.error('No project ID available for database operations');
-            const aiMessage: Message = {
-              id: generateMessageId(),
-              content: result.task_summary || 'Project created successfully!',
-              type: 'ai',
-              timestamp: new Date()
-            };
-            setMessages(prev => [...prev, aiMessage]);
-            return;
-          }
-
-          // Save messages to database and get proper message IDs
-          const dbResult = await saveChatMessageToDatabase(
-            projectIdForDb,
-            messageContent,
-            result.task_summary || 'Project created successfully!',
-            result.sandbox_url,
-            result.files_created
-          );
-
-          if (dbResult.success) {
-            // Keep the temp user message and add the AI response with real database ID
-            const aiMessage: Message = {
-              id: dbResult.aiMessage!.id,
-              content: result.task_summary || 'Project created successfully!',
-              type: 'ai',
-              timestamp: dbResult.aiMessage!.timestamp,
-            };
-            setMessages(prev => [...prev, aiMessage]);
-          } else {
-            // If database save failed, keep the temp messages but log the error
-            console.error('Failed to save to database:', dbResult.error);
-            const aiMessage: Message = {
-              id: generateMessageId(),
-              content: result.task_summary || 'Project created successfully!',
-              type: 'ai',
-              timestamp: new Date()
-            };
-            setMessages(prev => [...prev, aiMessage]);
-          }
-
-          // If we have a sandbox URL, we could show it in a special way
-          if (result.sandbox_url) {
-            console.log('Project created with sandbox URL:', result.sandbox_url);
-            console.log('Files created:', result.files_created);
-          }
-        } else {
-          // Remove temp message and show error
-          setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
-          console.error('Failed to send message:', result.error);
-          
-          // Show error message to user
-          const errorMessage: Message = {
+        // Ensure we have a project ID for database operations
+        const projectIdForDb = currentProjectId.current || result.project_id;
+        if (!projectIdForDb) {
+          console.error('No project ID available for database operations');
+          const aiMessage: Message = {
             id: generateMessageId(),
-            content: `❌ ${result.error || 'Failed to process your request. Please try again.'}`,
+            content: result.task_summary || 'Project created successfully!',
             type: 'ai',
             timestamp: new Date()
           };
-          setMessages(prev => [...prev, errorMessage]);
+          setMessages(prev => [...prev, aiMessage]);
+          return;
+        }
+
+        // Save messages to database and get proper message IDs
+        const dbResult = await saveChatMessageToDatabase(
+          projectIdForDb,
+          messageContent,
+          result.task_summary || 'Project created successfully!',
+          result.sandbox_url,
+          result.files_created
+        );
+
+        if (dbResult.success) {
+          // Keep the temp user message and add the AI response with real database ID
+          const aiMessage: Message = {
+            id: dbResult.aiMessage!.id,
+            content: result.task_summary || 'Project created successfully!',
+            type: 'ai',
+            timestamp: dbResult.aiMessage!.timestamp,
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        } else {
+          // If database save failed, keep the temp messages but log the error
+          console.error('Failed to save to database:', dbResult.error);
+          const aiMessage: Message = {
+            id: generateMessageId(),
+            content: result.task_summary || 'Project created successfully!',
+            type: 'ai',
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, aiMessage]);
+        }
+
+        // If we have a sandbox URL, we could show it in a special way
+        if (result.sandbox_url) {
+          console.log('Project created with sandbox URL:', result.sandbox_url);
+          console.log('Files created:', result.files_created);
         }
       } else {
         // Remove temp message and show error
         setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
-        const errorText = await response.text();
-        console.error('API error:', errorText);
+        console.error('Failed to send message:', result.error);
         
         // Show error message to user
         const errorMessage: Message = {
           id: generateMessageId(),
-          content: `❌ API Error: ${response.status} ${response.statusText}. Please try again.`,
+          content: `❌ ${result.error || 'Failed to process your request. Please try again.'}`,
           type: 'ai',
           timestamp: new Date()
         };
