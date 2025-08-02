@@ -2,17 +2,14 @@
 
 import { checkoutAction } from '@/lib/payments/actions';
 import { Check, AlertCircle } from 'lucide-react';
-import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
 import { Button } from '@/components/ui/button';
-import { getUser } from '@/lib/db/queries';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-// Prices are fresh for one hour max
-export const revalidate = 3600;
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export default function PricingPage() {
+function PricingPageContent() {
   const [prices, setPrices] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
@@ -38,15 +35,14 @@ export default function PricingPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [pricesData, productsData, userData] = await Promise.all([
-          getStripePrices(),
-          getStripeProducts(),
-          getUser(),
-        ]);
-        
-        setPrices(pricesData);
-        setProducts(productsData);
-        setUser(userData);
+        const response = await fetcher('/api/pricing');
+        if (response.success) {
+          setPrices(response.data.prices);
+          setProducts(response.data.products);
+          setUser(response.data.user);
+        } else {
+          console.error('Failed to fetch pricing data:', response.error);
+        }
       } catch (error) {
         console.error('Failed to fetch pricing data:', error);
       } finally {
@@ -127,6 +123,21 @@ export default function PricingPage() {
         />
       </div>
     </main>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ai-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading pricing information...</p>
+        </div>
+      </main>
+    }>
+      <PricingPageContent />
+    </Suspense>
   );
 }
 
