@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Sparkles, Share2, Settings, Plus } from 'lucide-react';
+import { SquareCodeIcon, Share2, Settings, Plus } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { useState } from 'react';
 import { createNewProject } from '@/app/api/chat/actions';
@@ -51,7 +51,7 @@ const Header = () => {
             onClick={handleLogoClick}
           >
             <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-white" />
+              <SquareCodeIcon className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-lg bg-gradient-primary bg-clip-text text-transparent">
               AutoCoder

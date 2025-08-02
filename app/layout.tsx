@@ -4,8 +4,18 @@ import { Manrope } from 'next/font/google';
 import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
-  title: 'Auto Coding AI app',
-  description: 'Tech used: Next.js, React, Typescript, Supabase, Redis and Stripe.'
+  title: 'AutoCoder',
+  description: 'Tech used: Next.js, React, Typescript, Supabase, Redis and Stripe.',
+  icons: {
+    icon: [
+      {
+        url: '/icon.svg',
+        type: 'image/svg+xml',
+      },
+    ],
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 export const viewport: Viewport = {
