@@ -1,25 +1,95 @@
+'use client';
+
 import { checkoutAction } from '@/lib/payments/actions';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
 import { Button } from '@/components/ui/button';
 import { getUser } from '@/lib/db/queries';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 
 // Prices are fresh for one hour max
 export const revalidate = 3600;
 
-export default async function PricingPage() {
-  const [prices, products, user] = await Promise.all([
-    getStripePrices(),
-    getStripeProducts(),
-    getUser(),
-  ]);
+export default function PricingPage() {
+  const [prices, setPrices] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showError, setShowError] = useState(false);
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    // Check for error parameter
+    const error = searchParams.get('error');
+    if (error === 'checkout_failed') {
+      setShowError(true);
+      // Remove the parameter from URL without page reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('error');
+      window.history.replaceState({}, '', url.toString());
+      
+      // Hide error message after 5 seconds
+      setTimeout(() => setShowError(false), 5000);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [pricesData, productsData, userData] = await Promise.all([
+          getStripePrices(),
+          getStripeProducts(),
+          getUser(),
+        ]);
+        
+        setPrices(pricesData);
+        setProducts(productsData);
+        setUser(userData);
+      } catch (error) {
+        console.error('Failed to fetch pricing data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ai-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading pricing information...</p>
+        </div>
+      </main>
+    );
+  }
 
   const plusPlan = products.find((product) => product.name === 'Plus');
   const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 bg-background">
+      {/* Error Message */}
+      {showError && (
+        <div className="mb-8 bg-gradient-to-r from-red-50 to-rose-50 border border-red-200 rounded-xl p-6 shadow-sm">
+          <div className="flex items-center">
+            <div className="bg-red-100 rounded-full p-2 mr-4">
+              <AlertCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-red-800">Payment Failed</h3>
+              <p className="text-red-700">
+                There was an issue processing your payment. Please try again or contact support if the problem persists.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-foreground mb-4">Choose Your Plan</h1>
         <p className="text-lg text-muted-foreground">

@@ -54,7 +54,7 @@ const Header = () => {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <span className="font-bold text-lg bg-gradient-primary bg-clip-text text-transparent">
-              Lovable Clone
+              AutoCoder
             </span>
           </div>
         </div>

@@ -65,6 +65,7 @@ export const fragments = pgTable('fragments', {
   }),
   projectId: text('project_id')
     .notNull()
+    .unique()
     .references(() => projects.id, { onDelete: 'cascade' }),
   sandboxUrl: text('sandbox_url').notNull(),
   files: jsonb('files').notNull(),

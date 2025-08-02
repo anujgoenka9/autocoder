@@ -1,9 +1,9 @@
 'use client'
 
-import { Plus, FolderOpen, Zap, Code, Palette, Smartphone, ChevronUp } from 'lucide-react';
+import { Plus, FolderOpen, Zap, Code, Palette, Smartphone, ChevronUp, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SuggestionChat from '@/components/SuggestionChat';
@@ -31,12 +31,29 @@ export default function HomePage() {
   const [showAllProjects, setShowAllProjects] = useState(false);
   const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const projectsRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   // Check if user is authenticated
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const isAuthenticated = !!user;
+
+  useEffect(() => {
+    // Check for payment success parameter
+    const paymentSuccess = searchParams.get('payment');
+    if (paymentSuccess === 'success') {
+      setShowPaymentSuccess(true);
+      // Remove the parameter from URL without page reload
+      const url = new URL(window.location.href);
+      url.searchParams.delete('payment');
+      window.history.replaceState({}, '', url.toString());
+      
+      // Hide success message after 5 seconds
+      setTimeout(() => setShowPaymentSuccess(false), 5000);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const loadRecentProjects = async () => {
@@ -146,6 +163,23 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Payment Success Banner */}
+        {showPaymentSuccess && (
+          <div className="mb-8 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 shadow-sm">
+            <div className="flex items-center">
+              <div className="bg-green-100 rounded-full p-2 mr-4">
+                <CheckCircle className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-green-800">Payment Successful!</h3>
+                <p className="text-green-700">
+                  Your subscription has been upgraded successfully. Welcome to the Plus plan!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold mb-4 text-ai-primary">

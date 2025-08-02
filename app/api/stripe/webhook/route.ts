@@ -68,7 +68,13 @@ export async function POST(request: NextRequest) {
       break;
     case 'customer.subscription.updated':
       const updatedSubscription = event.data.object as Stripe.Subscription;
-      await updateUserSubscription(updatedSubscription.customer as string, updatedSubscription);
+      // Handle both regular updates and period-end cancellations
+      if (updatedSubscription.status === 'canceled' && updatedSubscription.cancel_at_period_end) {
+        // Subscription was cancelled at period end and has now expired
+        await handleSubscriptionCancellation(updatedSubscription.customer as string);
+      } else {
+        await updateUserSubscription(updatedSubscription.customer as string, updatedSubscription);
+      }
       break;
     case 'customer.subscription.deleted':
       const deletedSubscription = event.data.object as Stripe.Subscription;

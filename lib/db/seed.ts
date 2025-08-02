@@ -13,7 +13,7 @@ async function createStripeProducts() {
 
   await stripe.prices.create({
     product: plusProduct.id,
-    unit_amount: 1200, // $12 in cents
+    unit_amount: 1000, // $10 in cents
     currency: 'usd',
     recurring: {
       interval: 'month'
