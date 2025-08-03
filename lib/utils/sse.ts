@@ -1,4 +1,4 @@
-import { createSSEManager, setController, removeController, getController } from '@/lib/redis';
+import { createSSEManager, setController, removeController, getController } from '@/lib/utils/redis';
 
 // SSE manager (Redis or fallback)
 const sseManager = createSSEManager();

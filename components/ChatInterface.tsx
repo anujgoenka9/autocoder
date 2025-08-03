@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Send, Bot, User, Edit3, Check, X } from 'lucide-react';
 import { updateProjectNameAction, loadProjectById, saveChatMessageToDatabase, sendMessageToAgent } from '@/app/api/chat/actions';
 import { useUser } from '@/hooks/useUser';
+import { fetchUserCredits } from '@/lib/utils/credits-client';
+
 
 interface Message {
   id: string;
@@ -36,6 +38,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editingName, setEditingName] = useState('');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
+  const [credits, setCredits] = useState<number>(0);
   
   // Get current user
   const { user, isLoading: isLoadingUser } = useUser();
@@ -72,6 +75,22 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
 
     loadChatHistory();
   }, [projectId, router]);
+
+  // Load user credits independently
+  useEffect(() => {
+    const loadCredits = async () => {
+      if (user && !isLoadingUser) {
+        try {
+          const userCredits = await fetchUserCredits();
+          setCredits(userCredits);
+        } catch (error) {
+          console.error('Failed to load credits:', error);
+        }
+      }
+    };
+
+    loadCredits();
+  }, [user, isLoadingUser]);
 
   // Handle prefill message from suggestion chat
   useEffect(() => {
@@ -158,6 +177,18 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
 
   const sendMessage = async (messageContent: string) => {
     if (!messageContent.trim() || isTyping) {
+      return;
+    }
+
+    // Check if user has enough credits
+    if (credits <= 0) {
+      const errorMessage: Message = {
+        id: generateMessageId(),
+        content: '❌ You have no credits remaining. Please upgrade your plan or purchase more credits to continue.',
+        type: 'ai',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
       return;
     }
 
@@ -252,6 +283,15 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
             timestamp: dbResult.aiMessage!.timestamp,
           };
           setMessages(prev => [...prev, aiMessage]);
+          
+          // Update credits in real-time if deduction was successful
+          if (dbResult.creditDeduction?.success && typeof dbResult.creditDeduction.remainingCredits === 'number') {
+            setCredits(dbResult.creditDeduction.remainingCredits);
+          } else {
+            // If deduction failed or wasn't returned, refresh credits from server
+            const updatedCredits = await fetchUserCredits();
+            setCredits(updatedCredits);
+          }
         } else {
           // If database save failed, keep the temp messages but log the error
           console.error('Failed to save to database:', dbResult.error);
@@ -450,6 +490,25 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
 
       {/* Input */}
       <div className="p-4 border-t border-chat-border">
+        {credits <= 3 && (
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs text-muted-foreground">
+              Credits remaining: <span className={`font-semibold ${credits <= 0 ? 'text-red-500' : 'text-yellow-500'}`}>
+                {credits}
+              </span>
+              {credits <= 0 && (
+                <span className="text-red-600 ml-2">❌ No credits</span>
+              )}
+            </div>
+            <Button
+              onClick={() => router.push('/pricing')}
+              size="sm"
+              className="bg-gradient-primary hover:opacity-90 text-white text-xs px-3 py-1 h-6"
+            >
+              Upgrade
+            </Button>
+          </div>
+        )}
         <div className="flex gap-2">
           <Input
             value={input}
@@ -461,7 +520,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
           />
           <Button 
             onClick={handleSendMessage}
-            disabled={!input.trim() || isTyping}
+            disabled={!input.trim() || isTyping || credits <= 0}
             className="bg-gradient-primary hover:opacity-90"
           >
             <Send className="w-4 h-4" />

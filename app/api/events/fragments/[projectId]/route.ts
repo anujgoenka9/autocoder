@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSSEManager, setController, removeController, getController } from '@/lib/redis';
+import { createSSEManager, setController, removeController, getController } from '@/lib/utils/redis';
 import { v4 as uuidv4 } from 'uuid';
 
 // SSE manager (Redis or fallback)

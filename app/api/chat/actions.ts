@@ -109,12 +109,45 @@ export async function saveChatMessageToDatabase(
     // Import the necessary functions
     const { saveMessage, upsertFragment } = await import('@/lib/db/queries');
     const { MessageRole } = await import('@/lib/db/schema');
+    const { deductCredits, getCredits } = await import('@/lib/utils/credits');
+    const { getUser } = await import('@/lib/db/queries');
     
     // Save user message
     const userMessageRecord = await saveMessage(projectId, userMessage, MessageRole.USER);
     
     // Save AI response
     const aiMessageRecord = await saveMessage(projectId, aiResponse, MessageRole.ASSISTANT);
+    
+    // Deduct credits for AI response directly
+    let creditDeductionResult = null;
+    try {
+      const user = await getUser();
+      if (user) {
+        const success = await deductCredits(user.id, 1);
+        
+        if (success) {
+          const remainingCredits = await getCredits(user.id);
+          creditDeductionResult = {
+            success: true,
+            remainingCredits,
+            deducted: 1
+          };
+        } else {
+          creditDeductionResult = {
+            success: false,
+            error: 'Insufficient credits'
+          };
+        }
+      } else {
+        creditDeductionResult = {
+          success: false,
+          error: 'User not found'
+        };
+      }
+    } catch (creditError) {
+      console.error('Error deducting credits:', creditError);
+      creditDeductionResult = { success: false, error: 'Credit deduction error' };
+    }
     
     // Save or update fragment if we have sandbox URL and files
     if (sandboxUrl && filesCreated) {
@@ -140,6 +173,7 @@ export async function saveChatMessageToDatabase(
         type: 'ai' as const,
         timestamp: aiMessageRecord.createdAt,
       },
+      creditDeduction: creditDeductionResult,
     };
   } catch (error) {
     console.error('Failed to save chat message to database:', error);

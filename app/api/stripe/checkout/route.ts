@@ -1,4 +1,5 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { addCredits } from '@/lib/utils/credits';
 import { db } from '@/lib/db/drizzle';
 import { users } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
@@ -53,16 +54,22 @@ export async function GET(request: NextRequest) {
       const productName = (plan?.product as Stripe.Product)?.name;
 
       // Update user subscription in database
+      const isPlusPlan = productName?.toLowerCase() === 'plus';
       await db
         .update(users)
         .set({
-          subscriptionPlan: productName?.toLowerCase() === 'plus' ? 'plus' : 'base',
+          subscriptionPlan: isPlusPlan ? 'plus' : 'base',
           subscriptionStatus: subscription.status,
           stripeCustomerId: customerId,
           stripeSubscriptionId: subscriptionId,
           updatedAt: new Date(),
         })
         .where(eq(users.id, Number(userId)));
+
+      // Add initial 100 credits for plus plan users
+      if (isPlusPlan) {
+        await addCredits(Number(userId), 100);
+      }
     }
 
     await setSession(user[0]);

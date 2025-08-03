@@ -38,8 +38,10 @@ import {
   cancelSubscriptionAtPeriodEnd,
   getAccountActivityLogs 
 } from '@/app/api/account/actions';
+
 import { updateAccount, updatePassword, deleteAccount } from '@/app/(login)/actions';
 import { ActivityType } from '@/lib/db/schema';
+import { fetchUserCredits } from '@/lib/utils/credits-client';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 
@@ -160,6 +162,7 @@ function AccountSettingsContent() {
   const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [credits, setCredits] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -204,8 +207,11 @@ function AccountSettingsContent() {
           getAccountActivityLogs()
         ]);
 
-        if (userResult.success) {
+        if (userResult.success && userResult.user) {
           setUser(userResult.user);
+          // Get user credits via API
+          const userCredits = await fetchUserCredits();
+          setCredits(userCredits);
         }
 
         if (subscriptionResult.success) {
@@ -366,6 +372,9 @@ function AccountSettingsContent() {
                         ? `Cancelling ${subscription?.currentPeriodEnd ? `on ${new Date(subscription.currentPeriodEnd).toLocaleDateString()}` : 'at period end'}`
                         : 'Premium features included'
                     }
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Credits remaining: <span className="font-semibold text-ai-primary">{credits}</span>
                   </p>
                 </div>
               </div>

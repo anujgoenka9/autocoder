@@ -43,6 +43,13 @@
       "when": 1754086237926,
       "tag": "0005_young_longshot",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1754189966198,
+      "tag": "0006_user_credits",
+      "breakpoints": true
     }
   ]
 }
