@@ -50,10 +50,8 @@ const Header = () => {
             className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
             onClick={handleLogoClick}
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
-              <SquareCodeIcon className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-lg bg-gradient-primary bg-clip-text text-transparent">
+            <SquareCodeIcon className="h-6 w-6 text-ai-primary" />
+            <span className="text-xl font-semibold text-ai-primary">
               AutoCoder
             </span>
           </div>
