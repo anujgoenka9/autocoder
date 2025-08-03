@@ -42,12 +42,9 @@ export function SignUpForm() {
           data: {
             full_name: name.trim() || email.split('@')[0], // Use name or fallback to email prefix
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${
-            redirect === 'checkout' && priceId ? `pricing?priceId=${priceId}` :
-            redirect === 'pricing' && priceId ? `pricing?priceId=${priceId}` :
-            redirect ? redirect :
-            ''
-          }`,
+          emailRedirectTo: `${window.location.origin}/auth/callback${
+            redirect ? `?redirect=${redirect}` : ''
+          }${priceId ? `${redirect ? '&' : '?'}priceId=${priceId}` : ''}`,
         },
       });
       if (error) throw error;

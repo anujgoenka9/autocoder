@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const redirect = searchParams.get('redirect')
+  const priceId = searchParams.get('priceId')
 
   if (code) {
     const supabase = await createClient()
@@ -12,10 +13,18 @@ export async function GET(request: NextRequest) {
     
     if (!error) {
       // Successful email confirmation
-      if (redirect) {
+      if (redirect === 'pricing' && priceId) {
+        return NextResponse.redirect(`${origin}/pricing?priceId=${priceId}`)
+      } else if (redirect === 'checkout' && priceId) {
+        return NextResponse.redirect(`${origin}/pricing?priceId=${priceId}`)
+      } else if (redirect) {
         return NextResponse.redirect(`${origin}/${redirect}`)
       }
       return NextResponse.redirect(`${origin}/`)
+    } else {
+      // Log the error for debugging
+      console.error('Auth callback error:', error)
+      return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent(error.message)}`)
     }
   }
 
