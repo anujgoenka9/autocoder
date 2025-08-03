@@ -10,8 +10,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export function SignUpForm() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -25,12 +27,21 @@ export function SignUpForm() {
     const supabase = createClient();
     setIsLoading(true);
     setError(null);
+    
+    if (password !== repeatPassword) {
+      setError("Passwords do not match");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          data: {
+            full_name: name.trim() || email.split('@')[0], // Use name or fallback to email prefix
+          },
           emailRedirectTo: `${window.location.origin}/auth/callback?redirect=${
             redirect === 'checkout' && priceId ? `pricing?priceId=${priceId}` :
             redirect === 'pricing' && priceId ? `pricing?priceId=${priceId}` :
@@ -79,6 +90,29 @@ export function SignUpForm() {
           <form className="space-y-6" onSubmit={handleSignUp}>
             <div>
               <Label
+                htmlFor="name"
+                className="block text-sm font-medium text-card-foreground"
+              >
+                Full Name
+              </Label>
+              <div className="mt-1">
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  maxLength={100}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="appearance-none rounded-full relative block w-full px-3 py-2 border border-border placeholder-muted-foreground text-card-foreground focus:outline-none focus:ring-ai-primary focus:border-ai-primary focus:z-10 sm:text-sm bg-background"
+                  placeholder="Enter your full name"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label
                 htmlFor="email"
                 className="block text-sm font-medium text-card-foreground"
               >
@@ -124,9 +158,30 @@ export function SignUpForm() {
               </div>
             </div>
 
-            {error && (
-              <div className="text-destructive text-sm">{error}</div>
-            )}
+            <div>
+              <Label
+                htmlFor="repeat-password"
+                className="block text-sm font-medium text-card-foreground"
+              >
+                Repeat Password
+              </Label>
+              <div className="mt-1">
+                <Input
+                  id="repeat-password"
+                  name="repeatPassword"
+                  type="password"
+                  required
+                  minLength={8}
+                  maxLength={100}
+                  value={repeatPassword}
+                  onChange={(e) => setRepeatPassword(e.target.value)}
+                  className="appearance-none rounded-full relative block w-full px-3 py-2 border border-border placeholder-muted-foreground text-card-foreground focus:outline-none focus:ring-ai-primary focus:border-ai-primary focus:z-10 sm:text-sm bg-background"
+                  placeholder="Repeat your password"
+                />
+              </div>
+            </div>
+
+            {error && <div className="text-destructive text-sm">{error}</div>}
 
             <div>
               <Button

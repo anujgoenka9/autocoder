@@ -69,7 +69,6 @@ const SuggestionChat = () => {
   return (
     <Card className="max-w-4xl mx-auto bg-gradient-chat border-chat-border">
       <CardContent className="p-6">
-
         {/* Input */}
         <div className="space-y-4">
           <div className="flex gap-2">
@@ -92,15 +91,15 @@ const SuggestionChat = () => {
           </div>
         </div>
 
-                {/* Suggestions */}
-        <div className="mb-6 mt-5">
-          <ScrollArea className="h-48">
+        {/* Suggestions */}
+        <div className="mt-4">
+          <ScrollArea className="h-40">
             <div className="grid gap-2">
               {suggestions.map((suggestion, index) => (
                 <Button
                   key={index}
                   variant="outline"
-                  className="justify-start text-left h-auto p-3 border-chat-border bg-chat-ai hover:bg-chat-user/10 transition-colors"
+                  className="justify-start text-left h-auto p-2 border-chat-border bg-chat-ai hover:bg-chat-user/10 transition-colors"
                   onClick={() => handleSuggestionClick(suggestion)}
                   disabled={isStartingProject}
                 >
