@@ -69,41 +69,31 @@ const SuggestionChat = () => {
   return (
     <Card className="max-w-4xl mx-auto bg-gradient-chat border-chat-border">
       <CardContent className="p-6">
-        {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
-            <Bot className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-lg text-foreground">AI Assistant</h3>
-            <p className="text-sm text-muted-foreground">Ready to help you build amazing apps</p>
-          </div>
-          <div className="ml-auto">
-            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+
+        {/* Input */}
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleStartBuilding()}
+              placeholder="Describe an app idea or click on one of the suggestions below..."
+              className="flex-1 bg-chat-ai border-chat-border"
+              disabled={isStartingProject}
+            />
+            <Button 
+              onClick={handleStartBuilding}
+              disabled={!input.trim() || isStartingProject}
+              className="bg-gradient-primary hover:opacity-90"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              {isStartingProject ? 'Starting...' : 'Start Building'}
+            </Button>
           </div>
         </div>
 
-        {/* Welcome Message */}
-        <div className="bg-chat-ai rounded-lg p-4 mb-6 border border-chat-border">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center shrink-0">
-              <Bot className="w-4 h-4 text-white" />
-            </div>
-            <div>
-              <p className="text-foreground mb-2">
-                👋 Welcome! I'm here to help you build amazing web applications. 
-                Try one of these suggestions or describe your own idea:
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Suggestions */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Lightbulb className="w-4 h-4 text-primary" />
-            <h4 className="font-medium text-foreground">Popular Ideas</h4>
-          </div>
+                {/* Suggestions */}
+        <div className="mb-6 mt-5">
           <ScrollArea className="h-48">
             <div className="grid gap-2">
               {suggestions.map((suggestion, index) => (
@@ -122,31 +112,6 @@ const SuggestionChat = () => {
               ))}
             </div>
           </ScrollArea>
-        </div>
-
-        {/* Input */}
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleStartBuilding()}
-              placeholder="Or describe your own app idea..."
-              className="flex-1 bg-chat-ai border-chat-border"
-              disabled={isStartingProject}
-            />
-            <Button 
-              onClick={handleStartBuilding}
-              disabled={!input.trim() || isStartingProject}
-              className="bg-gradient-primary hover:opacity-90"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              {isStartingProject ? 'Starting...' : 'Start Building'}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground text-center">
-            Click a suggestion above or type your own idea to get started
-          </p>
         </div>
       </CardContent>
     </Card>

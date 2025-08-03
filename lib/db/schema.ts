@@ -10,10 +10,9 @@ import {
 import { relations } from 'drizzle-orm';
 
 export const users = pgTable('users', {
-  id: serial('id').primaryKey(),
+  id: text('id').primaryKey(), // This will be the Supabase user UUID
   name: varchar('name', { length: 100 }),
   email: varchar('email', { length: 255 }).notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
   role: varchar('role', { length: 20 }).notNull().default('member'),
   subscriptionPlan: varchar('subscription_plan', { length: 20 }).notNull().default('base'),
   subscriptionStatus: varchar('subscription_status', { length: 20 }).default('inactive'),
@@ -25,20 +24,12 @@ export const users = pgTable('users', {
   deletedAt: timestamp('deleted_at'),
 });
 
-export const activityLogs = pgTable('activity_logs', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id')
-    .notNull()
-    .references(() => users.id),
-  action: text('action').notNull(),
-  timestamp: timestamp('timestamp').notNull().defaultNow(),
-  ipAddress: varchar('ip_address', { length: 45 }),
-});
+// Activity logs removed - Supabase handles auth logging
 
 export const projects = pgTable('projects', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text('name').notNull(),
-  userId: integer('user_id')
+  userId: text('user_id')
     .notNull()
     .references(() => users.id),
   createdAt: timestamp('created_at').notNull().defaultNow(),
@@ -75,15 +66,7 @@ export const fragments = pgTable('fragments', {
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
-  activityLogs: many(activityLogs),
   projects: many(projects),
-}));
-
-export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
-  user: one(users, {
-    fields: [activityLogs.userId],
-    references: [users.id],
-  }),
 }));
 
 export const projectsRelations = relations(projects, ({ one, many }) => ({
@@ -111,8 +94,6 @@ export const fragmentsRelations = relations(fragments, ({ one }) => ({
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-export type ActivityLog = typeof activityLogs.$inferSelect;
-export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Project = typeof projects.$inferSelect;
 export type NewProject = typeof projects.$inferInsert;
 export type Message = typeof messages.$inferSelect;
@@ -120,14 +101,7 @@ export type NewMessage = typeof messages.$inferInsert;
 export type Fragment = typeof fragments.$inferSelect;
 export type NewFragment = typeof fragments.$inferInsert;
 
-export enum ActivityType {
-  SIGN_UP = 'SIGN_UP',
-  SIGN_IN = 'SIGN_IN',
-  SIGN_OUT = 'SIGN_OUT',
-  UPDATE_PASSWORD = 'UPDATE_PASSWORD',
-  DELETE_ACCOUNT = 'DELETE_ACCOUNT',
-  UPDATE_ACCOUNT = 'UPDATE_ACCOUNT',
-}
+// Activity types removed with activity logs
 
 export enum MessageRole {
   USER = 'USER',

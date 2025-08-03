@@ -1,1 +1,0 @@
-ALTER TABLE "fragments" ADD CONSTRAINT "fragments_project_id_unique" UNIQUE("project_id");

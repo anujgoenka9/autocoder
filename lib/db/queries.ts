@@ -1,10 +1,64 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, users, projects, messages, fragments, type NewProject, type NewMessage, type NewFragment, MessageRole, MessageType } from './schema';
+import { users, projects, messages, fragments, type NewProject, type NewMessage, type NewFragment, MessageRole, MessageType } from './schema';
 import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth/session';
+// Note: Auth session removed during Supabase migration
+// import { verifyToken } from '@/lib/auth/session';
 
 export async function getUser() {
+  // Get user from Supabase auth
+  const { getUser: getSupabaseUser } = await import('@/lib/supabase/user');
+  const supabaseUser = await getSupabaseUser();
+  
+  if (!supabaseUser) {
+    return null;
+  }
+
+  // Get or create user in our database
+  const [dbUser] = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.id, supabaseUser.id), isNull(users.deletedAt)))
+    .limit(1);
+
+  if (!dbUser) {
+    // Create user in our database if doesn't exist
+    try {
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          id: supabaseUser.id,
+          email: supabaseUser.email!,
+          name: supabaseUser.user_metadata?.full_name || supabaseUser.email!.split('@')[0],
+          role: 'member',
+          credits: 3
+        })
+        .returning();
+      
+      return newUser;
+    } catch (error) {
+      console.error('Error creating user in database:', error);
+      // If user creation fails, still return a basic user object so auth doesn't break
+      return {
+        id: supabaseUser.id,
+        email: supabaseUser.email!,
+        name: supabaseUser.user_metadata?.full_name || supabaseUser.email!.split('@')[0],
+        role: 'member' as const,
+        credits: 0,
+        subscriptionPlan: 'base' as const,
+        subscriptionStatus: 'inactive' as const,
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        deletedAt: null
+      };
+    }
+  }
+
+  return dbUser;
+  
+  /* Original implementation - commented out during Supabase migration
   const sessionCookie = (await cookies()).get('session');
   if (!sessionCookie || !sessionCookie.value) {
     return null;
@@ -18,7 +72,7 @@ export async function getUser() {
   ) {
     return null;
   }
-
+  
   if (new Date(sessionData.expires) < new Date()) {
     return null;
   }
@@ -34,28 +88,10 @@ export async function getUser() {
   }
 
   return user[0];
+  */
 }
 
-export async function getActivityLogs() {
-  const user = await getUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  return await db
-    .select({
-      id: activityLogs.id,
-      action: activityLogs.action,
-      timestamp: activityLogs.timestamp,
-      ipAddress: activityLogs.ipAddress,
-      userName: users.name
-    })
-    .from(activityLogs)
-    .leftJoin(users, eq(activityLogs.userId, users.id))
-    .where(eq(activityLogs.userId, user.id))
-    .orderBy(desc(activityLogs.timestamp))
-    .limit(10);
-}
+// Activity logs removed - using Supabase auth events instead
 
 export async function getUserProjects() {
   const user = await getUser();

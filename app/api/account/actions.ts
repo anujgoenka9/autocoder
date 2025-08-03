@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { stripe } from '@/lib/payments/stripe';
-import { getUser, getActivityLogs } from '@/lib/db/queries';
+import { getUser } from '@/lib/db/queries';
 
 export async function getUserWithSubscription() {
   try {
@@ -91,18 +91,9 @@ export async function getSubscriptionDetails() {
 }
 
 export async function getAccountActivityLogs() {
-  try {
-    const logs = await getActivityLogs();
-    return {
-      success: true,
-      logs
-    };
-  } catch (error) {
-    console.error('Failed to fetch activity logs:', error);
-    return {
-      success: false,
-      error: 'Failed to fetch activity logs',
-      logs: []
-    };
-  }
+  // Activity logs removed - Supabase handles auth logging
+  return {
+    success: true,
+    logs: []
+  };
 } 

@@ -11,8 +11,8 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
 import PostLoginHandler from '@/components/PostLoginHandler';
@@ -25,10 +25,12 @@ function UserMenu() {
   const router = useRouter();
 
   async function handleSignOut() {
-    await signOut();
+    const supabase = createClient();
+    await supabase.auth.signOut();
     // Clear the SWR cache and set user to null immediately
     mutate('/api/user', null, false);
-    router.push('/');
+    router.push('/sign-in');
+    router.refresh(); // Force a page refresh to clear any cached state
   }
 
   if (!user) {

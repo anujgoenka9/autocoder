@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1753582497437,
-      "tag": "0000_init",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1753585590839,
-      "tag": "0001_added_projects_messages",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1753601207837,
-      "tag": "0002_cuddly_the_order",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1753755900096,
-      "tag": "0003_fragment_projectid",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1753773604377,
-      "tag": "0004_fragment_remove_title",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1754086237926,
-      "tag": "0005_young_longshot",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1754189966198,
-      "tag": "0006_user_credits",
+      "when": 1754213268720,
+      "tag": "0000_oval_betty_brant",
       "breakpoints": true
     }
   ]

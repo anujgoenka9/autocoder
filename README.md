@@ -1,8 +1,8 @@
-# Next.js SaaS Starter
+# AutoCoder
 
 This is a starter template for building a SaaS application using **Next.js** with support for authentication, Stripe integration for payments, and a dashboard for logged-in users.
 
-**Demo: [https://next-saas-start.vercel.app/](https://next-saas-start.vercel.app/)**
+**Demo: [https://www.autocodingai.space/](https://www.autocodingai.space/)**
 
 ## Features
 
@@ -20,11 +20,12 @@ This is a starter template for building a SaaS application using **Next.js** wit
 ## Tech Stack
 
 - **Framework**: [Next.js](https://nextjs.org/)
-- **Database**: [Postgres](https://www.postgresql.org/)
+- **Database and Auth**: [Supabase](https://supabase.com//)
 - **ORM**: [Drizzle](https://orm.drizzle.team/)
 - **Payments**: [Stripe](https://stripe.com/)
 - **UI Library**: [shadcn/ui](https://ui.shadcn.com/)
-- **AI Agent**: [LangGraph](https://github.com/langchain-ai/langgraph) + [E2B](https://e2b.dev/) for code generation
+- **AI Agent**: [LangGraph](https://github.com/langchain-ai/langgraph) + [E2B](https://e2b.dev/)
+- **API**: [FastAPI](https://fastapi.tiangolo.com/)
 
 ## Getting Started
 

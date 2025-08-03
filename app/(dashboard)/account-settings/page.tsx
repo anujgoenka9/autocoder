@@ -35,82 +35,26 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   getUserWithSubscription, 
   getSubscriptionDetails, 
-  cancelSubscriptionAtPeriodEnd,
-  getAccountActivityLogs 
+  cancelSubscriptionAtPeriodEnd
 } from '@/app/api/account/actions';
 
-import { updateAccount, updatePassword, deleteAccount } from '@/app/(login)/actions';
-import { ActivityType } from '@/lib/db/schema';
+import { updateAccount, updatePassword, deleteAccount } from '@/app/api/account/supabase-actions';
 import { fetchUserCredits } from '@/lib/utils/credits-client';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-const iconMap: Record<ActivityType, any> = {
-  [ActivityType.SIGN_UP]: UserPlus,
-  [ActivityType.SIGN_IN]: UserCog,
-  [ActivityType.SIGN_OUT]: LogOut,
-  [ActivityType.UPDATE_PASSWORD]: Lock,
-  [ActivityType.DELETE_ACCOUNT]: UserMinus,
-  [ActivityType.UPDATE_ACCOUNT]: Settings,
-};
+// Activity log functions removed - using Supabase auth events
 
-function getRelativeTime(date: Date) {
-  const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-  if (diffInSeconds < 60) return 'just now';
-  if (diffInSeconds < 3600)
-    return `${Math.floor(diffInSeconds / 60)} minutes ago`;
-  if (diffInSeconds < 86400)
-    return `${Math.floor(diffInSeconds / 3600)} hours ago`;
-  if (diffInSeconds < 604800)
-    return `${Math.floor(diffInSeconds / 86400)} days ago`;
-  return date.toLocaleDateString();
-}
-
-function formatAction(action: ActivityType): string {
-  switch (action) {
-    case ActivityType.SIGN_UP:
-      return 'You signed up';
-    case ActivityType.SIGN_IN:
-      return 'You signed in';
-    case ActivityType.SIGN_OUT:
-      return 'You signed out';
-    case ActivityType.UPDATE_PASSWORD:
-      return 'You changed your password';
-    case ActivityType.DELETE_ACCOUNT:
-      return 'You deleted your account';
-    case ActivityType.UPDATE_ACCOUNT:
-      return 'You updated your account';
-    default:
-      return 'Unknown action occurred';
-  }
-}
-
-type AccountState = {
-  name?: string;
+type ActionState = {
+  success?: boolean;
   error?: string;
-  success?: string;
-};
-
-type PasswordState = {
-  currentPassword?: string;
-  newPassword?: string;
-  confirmPassword?: string;
-  error?: string;
-  success?: string;
-};
-
-type DeleteState = {
-  password?: string;
-  error?: string;
-  success?: string;
+  message?: string;
 };
 
 function AccountForm({ state, nameValue = '', emailValue = '' }: {
-  state: AccountState;
+  state: ActionState;
   nameValue?: string;
   emailValue?: string;
 }) {
@@ -124,7 +68,7 @@ function AccountForm({ state, nameValue = '', emailValue = '' }: {
           id="name"
           name="name"
           placeholder="Enter your full name"
-          defaultValue={state.name || nameValue}
+                            defaultValue={nameValue}
           required
           className="bg-background border-border focus:border-ai-primary focus:ring-ai-primary transition-colors"
         />
@@ -147,7 +91,7 @@ function AccountForm({ state, nameValue = '', emailValue = '' }: {
   );
 }
 
-function AccountFormWithData({ state }: { state: AccountState }) {
+function AccountFormWithData({ state }: { state: ActionState }) {
   const { data: user } = useSWR('/api/user', fetcher);
   return (
     <AccountForm
@@ -161,7 +105,7 @@ function AccountFormWithData({ state }: { state: AccountState }) {
 function AccountSettingsContent() {
   const [user, setUser] = useState<any>(null);
   const [subscription, setSubscription] = useState<any>(null);
-  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  // Activity logs removed
   const [credits, setCredits] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -170,20 +114,20 @@ function AccountSettingsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [accountState, accountAction, isAccountPending] = useActionState<AccountState, FormData>(
+  const [accountState, accountAction, isAccountPending] = useActionState(
     updateAccount,
     {}
   );
 
-  const [passwordState, passwordAction, isPasswordPending] = useActionState<
-    PasswordState,
-    FormData
-  >(updatePassword, {});
+  const [passwordState, passwordAction, isPasswordPending] = useActionState(
+    updatePassword, 
+    {}
+  );
 
-  const [deleteState, deleteAction, isDeletePending] = useActionState<
-    DeleteState,
-    FormData
-  >(deleteAccount, {});
+  const [deleteState, deleteAction, isDeletePending] = useActionState(
+    deleteAccount, 
+    {}
+  );
 
   useEffect(() => {
     // Check for payment success parameter
@@ -201,10 +145,9 @@ function AccountSettingsContent() {
 
     async function fetchData() {
       try {
-        const [userResult, subscriptionResult, activityResult] = await Promise.all([
+        const [userResult, subscriptionResult] = await Promise.all([
           getUserWithSubscription(),
-          getSubscriptionDetails(),
-          getAccountActivityLogs()
+          getSubscriptionDetails()
         ]);
 
         if (userResult.success && userResult.user) {
@@ -216,10 +159,6 @@ function AccountSettingsContent() {
 
         if (subscriptionResult.success) {
           setSubscription(subscriptionResult);
-        }
-
-        if (activityResult.success) {
-          setActivityLogs(activityResult.logs);
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -315,9 +254,9 @@ function AccountSettingsContent() {
                   <p className="text-red-700 text-sm">{accountState.error}</p>
                 </div>
               )}
-              {accountState.success && (
+              {accountState.message && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-green-700 text-sm">{accountState.success}</p>
+                  <p className="text-green-700 text-sm">{accountState.message}</p>
                 </div>
               )}
               <Button
@@ -425,55 +364,37 @@ function AccountSettingsContent() {
                   Change Password
                 </h3>
                 <form className="space-y-6" action={passwordAction}>
-                  <div className="grid gap-6 md:grid-cols-1">
+                  <div className="grid gap-6 md:grid-cols-2">
                     <div>
-                      <Label htmlFor="current-password" className="text-sm font-medium text-card-foreground mb-2 block">
-                        Current Password
+                      <Label htmlFor="new-password" className="text-sm font-medium text-card-foreground mb-2 block">
+                        New Password
                       </Label>
                       <Input
-                        id="current-password"
-                        name="currentPassword"
+                        id="new-password"
+                        name="newPassword"
                         type="password"
-                        autoComplete="current-password"
+                        autoComplete="new-password"
                         required
                         minLength={8}
                         maxLength={100}
-                        defaultValue={passwordState.currentPassword}
                         className="bg-background border-border focus:border-ai-primary focus:ring-ai-primary transition-colors"
+                        placeholder="Enter your new password"
                       />
                     </div>
-                    <div className="grid gap-6 md:grid-cols-2">
-                      <div>
-                        <Label htmlFor="new-password" className="text-sm font-medium text-card-foreground mb-2 block">
-                          New Password
-                        </Label>
-                        <Input
-                          id="new-password"
-                          name="newPassword"
-                          type="password"
-                          autoComplete="new-password"
-                          required
-                          minLength={8}
-                          maxLength={100}
-                          defaultValue={passwordState.newPassword}
-                          className="bg-background border-border focus:border-ai-primary focus:ring-ai-primary transition-colors"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="confirm-password" className="text-sm font-medium text-card-foreground mb-2 block">
-                          Confirm New Password
-                        </Label>
-                        <Input
-                          id="confirm-password"
-                          name="confirmPassword"
-                          type="password"
-                          required
-                          minLength={8}
-                          maxLength={100}
-                          defaultValue={passwordState.confirmPassword}
-                          className="bg-background border-border focus:border-ai-primary focus:ring-ai-primary transition-colors"
-                        />
-                      </div>
+                    <div>
+                      <Label htmlFor="confirm-password" className="text-sm font-medium text-card-foreground mb-2 block">
+                        Confirm New Password
+                      </Label>
+                      <Input
+                        id="confirm-password"
+                        name="confirmPassword"
+                        type="password"
+                        required
+                        minLength={8}
+                        maxLength={100}
+                        className="bg-background border-border focus:border-ai-primary focus:ring-ai-primary transition-colors"
+                        placeholder="Confirm your new password"
+                      />
                     </div>
                   </div>
                   {passwordState.error && (
@@ -481,9 +402,9 @@ function AccountSettingsContent() {
                       <p className="text-red-700 text-sm">{passwordState.error}</p>
                     </div>
                   )}
-                  {passwordState.success && (
+                  {passwordState.message && (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                      <p className="text-green-700 text-sm">{passwordState.success}</p>
+                      <p className="text-green-700 text-sm">{passwordState.message}</p>
                     </div>
                   )}
                   <Button
@@ -519,19 +440,16 @@ function AccountSettingsContent() {
                 </div>
                 <form action={deleteAction} className="space-y-6">
                   <div>
-                    <Label htmlFor="delete-password" className="text-sm font-medium text-card-foreground mb-2 block">
-                      Confirm Your Password
+                    <Label htmlFor="confirm-delete" className="text-sm font-medium text-card-foreground mb-2 block">
+                      Type "DELETE" to confirm
                     </Label>
                     <Input
-                      id="delete-password"
-                      name="password"
-                      type="password"
+                      id="confirm-delete"
+                      name="confirmText"
+                      type="text"
                       required
-                      minLength={8}
-                      maxLength={100}
-                      defaultValue={deleteState.password}
                       className="bg-background border-border focus:border-red-500 focus:ring-red-500 transition-colors"
-                      placeholder="Enter your password to confirm deletion"
+                      placeholder="Type DELETE to confirm"
                     />
                   </div>
                   {deleteState.error && (
@@ -563,59 +481,7 @@ function AccountSettingsContent() {
           </CardContent>
         </Card>
 
-        {/* Activity Log */}
-        <Card className="bg-card border border-border hover:shadow-lg transition-all duration-300 overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-card to-card/90 border-b border-border">
-            <CardTitle className="flex items-center gap-3 text-xl text-card-foreground">
-              <div className="bg-ai-primary/10 rounded-full p-2">
-                <Activity className="h-5 w-5 text-ai-primary" />
-              </div>
-              Recent Activity
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-8">
-            {activityLogs.length > 0 ? (
-              <div className="space-y-4">
-                {activityLogs.map((log) => {
-                  const Icon = iconMap[log.action as ActivityType] || Settings;
-                  const formattedAction = formatAction(log.action as ActivityType);
-
-                  return (
-                    <div key={log.id} className="flex items-center gap-4 p-4 bg-background/50 rounded-lg border border-border/50 hover:bg-background transition-colors">
-                      <div className="bg-ai-primary/10 rounded-full p-3">
-                        <Icon className="w-5 h-5 text-ai-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-card-foreground">
-                          {formattedAction}
-                          {log.ipAddress && (
-                            <span className="text-muted-foreground font-normal"> from IP {log.ipAddress}</span>
-                          )}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {getRelativeTime(new Date(log.timestamp))}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center py-16">
-                <div className="bg-ai-primary/10 rounded-full p-6 mb-6">
-                  <AlertCircle className="h-12 w-12 text-ai-primary" />
-                </div>
-                <h3 className="text-xl font-semibold text-card-foreground mb-2">
-                  No activity yet
-                </h3>
-                <p className="text-muted-foreground max-w-sm leading-relaxed">
-                  When you perform actions like signing in, updating your account, or changing settings, 
-                  they'll appear here for your security monitoring.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Activity Log removed - Supabase handles auth events */}
       </div>
 
       {/* Cancel Subscription Dialog */}

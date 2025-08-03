@@ -5,7 +5,7 @@ import { users } from '@/lib/db/schema';
 /**
  * Add credits to a user's account
  */
-export async function addCredits(userId: number, amount: number): Promise<number> {
+export async function addCredits(userId: string, amount: number): Promise<number> {
   const result = await db
     .update(users)
     .set({
@@ -22,7 +22,7 @@ export async function addCredits(userId: number, amount: number): Promise<number
  * Deduct credits from a user's account
  * Returns true if successful, false if insufficient credits
  */
-export async function deductCredits(userId: number, amount: number): Promise<boolean> {
+export async function deductCredits(userId: string, amount: number): Promise<boolean> {
   // First check if user has enough credits
   const currentCredits = await getCredits(userId);
   
@@ -46,7 +46,7 @@ export async function deductCredits(userId: number, amount: number): Promise<boo
 /**
  * Get current credit balance for a user
  */
-export async function getCredits(userId: number): Promise<number> {
+export async function getCredits(userId: string): Promise<number> {
   const result = await db
     .select({ credits: users.credits })
     .from(users)
@@ -59,7 +59,7 @@ export async function getCredits(userId: number): Promise<number> {
 /**
  * Check if user has sufficient credits
  */
-export async function hasSufficientCredits(userId: number, required: number): Promise<boolean> {
+export async function hasSufficientCredits(userId: string, required: number): Promise<boolean> {
   const credits = await getCredits(userId);
   return credits >= required;
 }
@@ -68,7 +68,7 @@ export async function hasSufficientCredits(userId: number, required: number): Pr
  * Subtract credits for billing cycle end (can go to 0, never negative)
  * This is used for subscription billing cycles, not regular usage
  */
-export async function subtractBillingCycleCredits(userId: number, amount: number): Promise<number> {
+export async function subtractBillingCycleCredits(userId: string, amount: number): Promise<number> {
   const result = await db
     .update(users)
     .set({

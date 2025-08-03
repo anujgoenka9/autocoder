@@ -2,7 +2,8 @@ import { eq, sql } from 'drizzle-orm';
 import { addCredits } from '@/lib/utils/credits';
 import { db } from '@/lib/db/drizzle';
 import { users } from '@/lib/db/schema';
-import { setSession } from '@/lib/auth/session';
+// Note: setSession removed during Supabase migration
+// import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     const user = await db
       .select()
       .from(users)
-      .where(eq(users.id, Number(userId)))
+      .where(eq(users.id, userId))
       .limit(1);
 
     if (user.length === 0) {
@@ -64,15 +65,16 @@ export async function GET(request: NextRequest) {
           stripeSubscriptionId: subscriptionId,
           updatedAt: new Date(),
         })
-        .where(eq(users.id, Number(userId)));
+        .where(eq(users.id, userId));
 
       // Add initial 100 credits for plus plan users
       if (isPlusPlan) {
-        await addCredits(Number(userId), 100);
+        await addCredits(userId, 100);
       }
     }
 
-    await setSession(user[0]);
+    // TODO: Update session handling for Supabase during migration
+    // await setSession(user[0]);
     return NextResponse.redirect(new URL('/?payment=success', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
