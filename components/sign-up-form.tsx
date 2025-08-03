@@ -8,6 +8,7 @@ import { SquareCodeIcon, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { getAuthCallbackURL } from "@/lib/utils/url";
 
 export function SignUpForm() {
   const [name, setName] = useState("");
@@ -42,9 +43,7 @@ export function SignUpForm() {
           data: {
             full_name: name.trim() || email.split('@')[0], // Use name or fallback to email prefix
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback${
-            redirect ? `?redirect=${redirect}` : ''
-          }${priceId ? `${redirect ? '&' : '?'}priceId=${priceId}` : ''}`,
+          emailRedirectTo: getAuthCallbackURL(redirect || undefined, priceId || undefined),
         },
       });
       if (error) throw error;
