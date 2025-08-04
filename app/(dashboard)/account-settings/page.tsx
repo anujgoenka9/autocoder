@@ -129,6 +129,16 @@ function AccountSettingsContent() {
     {}
   );
 
+  // Handle email change redirect
+  useEffect(() => {
+    if (accountState.success && accountState.message?.includes('check your email')) {
+      // Redirect to email change verification page after a short delay
+      setTimeout(() => {
+        router.push('/change-email');
+      }, 2000);
+    }
+  }, [accountState, router]);
+
   useEffect(() => {
     // Check for payment success parameter
     const paymentSuccess = searchParams.get('payment');

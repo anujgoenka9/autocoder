@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { SquareCodeIcon, Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { getAuthCallbackURL } from "@/lib/utils/url";
+
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -22,12 +22,12 @@ export function ForgotPasswordForm() {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: getAuthCallbackURL()
-      });
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
 
       if (error) throw error;
 
+      // Store email for OTP verification
+      localStorage.setItem("reset_password_email", email);
       setIsSuccess(true);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
@@ -36,36 +36,35 @@ export function ForgotPasswordForm() {
     }
   };
 
-  if (isSuccess) {
-    return (
-      <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-background">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="flex justify-center">
-            <SquareCodeIcon className="h-12 w-12 text-ai-primary" />
+        if (isSuccess) {
+        return (
+          <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-background">
+            <div className="sm:mx-auto sm:w-full sm:max-w-md">
+              <div className="flex justify-center">
+                <SquareCodeIcon className="h-12 w-12 text-ai-primary" />
+              </div>
+              <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
+                Check Your Email
+              </h2>
+            </div>
+            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+              <div className="bg-card py-8 px-6 shadow-lg rounded-lg border border-border text-center">
+                <p className="text-muted-foreground mb-6">
+                  We've sent a verification code to <strong>{email}</strong>
+                </p>
+                <p className="text-sm text-muted-foreground mb-8">
+                  Enter the code on the reset password page to set your new password.
+                </p>
+                <Button asChild variant="outline" className="w-full border-border hover:bg-accent">
+                  <Link href={`/reset-password?email=${encodeURIComponent(email)}`} className="flex items-center justify-center">
+                    Continue to Reset Password
+                  </Link>
+                </Button>
+              </div>
+            </div>
           </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
-            Check Your Email
-          </h2>
-        </div>
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-card py-8 px-6 shadow-lg rounded-lg border border-border text-center">
-            <p className="text-muted-foreground mb-6">
-              We've sent a password reset link to <strong>{email}</strong>
-            </p>
-            <p className="text-sm text-muted-foreground mb-8">
-              Click the link in your email to reset your password. The link will expire in 1 hour.
-            </p>
-            <Button asChild variant="outline" className="w-full border-border hover:bg-accent">
-              <Link href="/sign-in" className="flex items-center justify-center">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Sign In
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+        );
+      }
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-background">

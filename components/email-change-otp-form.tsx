@@ -9,9 +9,10 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 
-export function OTPConfirmationForm() {
+export function EmailChangeOTPForm() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-  const [email, setEmail] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [oldEmail, setOldEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -22,12 +23,12 @@ export function OTPConfirmationForm() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
-    // Get email from URL params or localStorage
-    const emailParam = searchParams.get("email");
-    const storedEmail = localStorage.getItem("signup_email");
-    const emailToUse = emailParam || storedEmail || "";
-    setEmail(emailToUse);
-  }, [searchParams]);
+    // Get emails from localStorage
+    const storedNewEmail = localStorage.getItem("change_email_new");
+    const storedOldEmail = localStorage.getItem("change_email_old");
+    setNewEmail(storedNewEmail || "");
+    setOldEmail(storedOldEmail || "");
+  }, []);
 
   useEffect(() => {
     if (resendCountdown > 0) {
@@ -87,24 +88,25 @@ export function OTPConfirmationForm() {
     try {
       const supabase = createClient();
       const { data, error } = await supabase.auth.verifyOtp({
-        email,
+        email: newEmail,
         token: otpCode,
-        type: "signup"
+        type: "email_change"
       });
 
       if (error) throw error;
 
       if (data?.user) {
         setIsSuccess(true);
-        // Clear stored email
-        localStorage.removeItem("signup_email");
+        // Clear stored emails
+        localStorage.removeItem("change_email_new");
+        localStorage.removeItem("change_email_old");
         // Redirect after a short delay
         setTimeout(() => {
-          router.push("/");
+          router.push("/account-settings?message=Email address changed successfully!");
         }, 2000);
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Verification failed. Please try again.");
+      setError(error instanceof Error ? error.message : "Email change verification failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -119,8 +121,8 @@ export function OTPConfirmationForm() {
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.resend({
-        type: "signup",
-        email
+        type: "email_change",
+        email: newEmail
       });
 
       if (error) throw error;
@@ -141,20 +143,20 @@ export function OTPConfirmationForm() {
         <div className="sm:mx-auto sm:w-full sm:max-w-md">
           <div className="flex justify-center">
             <div className="bg-green-100 rounded-full p-3">
-              <SquareCodeIcon className="h-12 w-12 text-green-600" />
+              <Mail className="h-12 w-12 text-green-600" />
             </div>
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
-            Account Verified!
+            Email Changed Successfully!
           </h2>
         </div>
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
           <div className="bg-card py-8 px-6 shadow-lg rounded-lg border border-border text-center">
             <p className="text-muted-foreground mb-6">
-              Your email has been successfully verified. You're now signed in!
+              Your email address has been successfully changed to <strong>{newEmail}</strong>
             </p>
             <p className="text-sm text-muted-foreground">
-              Redirecting you to the dashboard...
+              Redirecting you to account settings...
             </p>
           </div>
         </div>
@@ -171,10 +173,10 @@ export function OTPConfirmationForm() {
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-foreground">
-          Verify your email
+          Confirm Email Change
         </h2>
         <p className="mt-2 text-center text-sm text-muted-foreground">
-          We've sent a 6-digit code to <strong>{email}</strong>
+          Enter the verification code sent to <strong>{newEmail}</strong>
         </p>
       </div>
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -220,7 +222,7 @@ export function OTPConfirmationForm() {
                   Verifying...
                 </>
               ) : (
-                'Verify Account'
+                'Confirm Email Change'
               )}
             </Button>
           </form>
@@ -255,11 +257,11 @@ export function OTPConfirmationForm() {
             </div>
             <div className="mt-6">
               <Link
-                href="/sign-in"
+                href="/account-settings"
                 className="w-full flex justify-center py-2 px-4 border border-border rounded-full shadow-sm text-sm font-medium text-card-foreground bg-background hover:bg-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-ai-primary transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Sign In
+                Back to Account Settings
               </Link>
             </div>
           </div>

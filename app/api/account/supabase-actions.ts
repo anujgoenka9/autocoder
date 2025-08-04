@@ -47,6 +47,10 @@ export async function updateAccount(prevState: ActionResult, formData: FormData)
       if (emailError) {
         return { error: emailError.message };
       }
+      
+      // Store email for OTP verification
+      localStorage.setItem("change_email_new", email);
+      localStorage.setItem("change_email_old", user.email || "");
     } else {
       // Just update the metadata if email is the same
       const { error: metaError } = await supabase.auth.updateUser({
@@ -73,7 +77,7 @@ export async function updateAccount(prevState: ActionResult, formData: FormData)
     return { 
       success: true, 
       message: email !== user.email 
-        ? 'Account updated! Please check your email to confirm the new address.'
+        ? 'Account updated! Please check your email to confirm the new address. You will be redirected to the verification page.'
         : 'Account updated successfully!' 
     };
 
