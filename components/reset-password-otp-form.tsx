@@ -139,10 +139,8 @@ export function ResetPasswordOTPForm() {
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.resend({
-        type: "recovery",
-        email
-      });
+      // For password reset, we need to use resetPasswordForEmail instead of resend
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
 
       if (error) throw error;
 
