@@ -1,11 +1,6 @@
 export const getURL = () => {
   const url = process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL
   
-  console.log('🔍 getURL Debug:', {
-    envVar: process.env.NEXT_PUBLIC_VERCEL_PROJECT_PRODUCTION_URL,
-    finalUrl: url
-  })
-  
   if (!url) {
     throw new Error('NEXT_PUBLIC_BASE_URL environment variable is not set')
   }
@@ -18,8 +13,6 @@ export const getURL = () => {
   if (!finalUrl.endsWith('/')) {
     finalUrl = `${finalUrl}/`
   }
-  
-  console.log('🔍 getURL Final URL:', finalUrl)
   
   return finalUrl
 }
@@ -35,13 +28,6 @@ export const getAuthCallbackURL = (redirect?: string, priceId?: string) => {
   if (priceId) {
     callbackURL += `${redirect ? '&' : '?'}priceId=${priceId}`
   }
-  
-  console.log('🔍 getAuthCallbackURL Debug:', {
-    baseURL,
-    redirect,
-    priceId,
-    finalCallbackURL: callbackURL
-  })
   
   return callbackURL
 } 

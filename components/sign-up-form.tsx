@@ -8,7 +8,6 @@ import { SquareCodeIcon, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { getAuthCallbackURL } from "@/lib/utils/url";
 
 export function SignUpForm() {
   const [name, setName] = useState("");
@@ -36,14 +35,6 @@ export function SignUpForm() {
     }
 
     try {
-      const emailRedirectTo = getAuthCallbackURL(redirect || undefined, priceId || undefined)
-      
-      console.log('🔍 SignUp Debug:', {
-        emailRedirectTo,
-        redirect,
-        priceId
-      })
-      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -51,14 +42,15 @@ export function SignUpForm() {
           data: {
             full_name: name.trim() || email.split('@')[0], // Use name or fallback to email prefix
           },
-          emailRedirectTo,
         },
       });
       if (error) throw error;
       
       if (data?.user && !data?.user?.email_confirmed_at) {
-        // User needs to confirm email
-        router.push("/auth/confirm?message=Check your email to confirm your account");
+        // Store email for OTP verification
+        localStorage.setItem("signup_email", email);
+        // User needs to confirm email with OTP
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
       } else {
         // User is confirmed, redirect appropriately
         if (redirect === 'checkout' && priceId) {
