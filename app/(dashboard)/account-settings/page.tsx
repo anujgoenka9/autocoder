@@ -68,24 +68,18 @@ function AccountForm({ state, nameValue = '', emailValue = '' }: {
           id="name"
           name="name"
           placeholder="Enter your full name"
-                            defaultValue={nameValue}
+          defaultValue={nameValue}
           required
           className="bg-background border-border focus:border-ai-primary focus:ring-ai-primary transition-colors"
         />
       </div>
       <div>
-        <Label htmlFor="email" className="text-sm font-medium text-card-foreground mb-2 block">
+        <Label className="text-sm font-medium text-card-foreground mb-2 block">
           Email Address
         </Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          placeholder="Enter your email address"
-          defaultValue={emailValue}
-          required
-          className="bg-background border-border focus:border-ai-primary focus:ring-ai-primary transition-colors"
-        />
+        <div className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md border border-border">
+          {emailValue || 'Email address cannot be changed after account creation'}
+        </div>
       </div>
     </div>
   );
@@ -129,15 +123,7 @@ function AccountSettingsContent() {
     {}
   );
 
-  // Handle email change redirect
-  useEffect(() => {
-    if (accountState.success && accountState.message?.includes('check your email')) {
-      // Redirect to email change verification page after a short delay
-      setTimeout(() => {
-        router.push('/change-email');
-      }, 2000);
-    }
-  }, [accountState, router]);
+
 
   useEffect(() => {
     // Check for payment success parameter
@@ -277,12 +263,12 @@ function AccountSettingsContent() {
                 {isAccountPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving Changes...
+                    Updating Name...
                   </>
                 ) : (
                   <>
                     <Edit className="mr-2 h-4 w-4" />
-                    Save Changes
+                    Update Full Name
                   </>
                 )}
               </Button>

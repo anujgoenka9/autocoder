@@ -13,10 +13,9 @@ export type ActionResult = {
   message?: string;
 };
 
-// Update account information (name, email)
+// Update account information (name only - email cannot be changed)
 const updateAccountSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
-  email: z.string().email('Invalid email address')
+  name: z.string().min(1, 'Name is required').max(100)
 });
 
 export async function updateAccount(prevState: ActionResult, formData: FormData): Promise<ActionResult> {
@@ -35,39 +34,22 @@ export async function updateAccount(prevState: ActionResult, formData: FormData)
       return { error: result.error.errors[0].message };
     }
 
-    const { name, email } = result.data;
+    const { name } = result.data;
 
-    // Update in Supabase Auth if email changed
-    if (email !== user.email) {
-      const { error: emailError } = await supabase.auth.updateUser({
-        email,
-        data: { full_name: name }
-      });
-      
-      if (emailError) {
-        return { error: emailError.message };
-      }
-      
-      // Store email for OTP verification
-      localStorage.setItem("change_email_new", email);
-      localStorage.setItem("change_email_old", user.email || "");
-    } else {
-      // Just update the metadata if email is the same
-      const { error: metaError } = await supabase.auth.updateUser({
-        data: { full_name: name }
-      });
-      
-      if (metaError) {
-        return { error: metaError.message };
-      }
+    // Update only the name in Supabase Auth metadata
+    const { error: metaError } = await supabase.auth.updateUser({
+      data: { full_name: name }
+    });
+    
+    if (metaError) {
+      return { error: metaError.message };
     }
 
-    // Update in our database
+    // Update only the name in our database (email cannot be changed)
     await db
       .update(users)
       .set({ 
-        name, 
-        email,
+        name,
         updatedAt: new Date() 
       })
       .where(eq(users.id, user.id));
@@ -76,9 +58,7 @@ export async function updateAccount(prevState: ActionResult, formData: FormData)
     
     return { 
       success: true, 
-      message: email !== user.email 
-        ? 'Account updated! Please check your email to confirm the new address. You will be redirected to the verification page.'
-        : 'Account updated successfully!' 
+      message: 'Account updated successfully!' 
     };
 
   } catch (error) {
