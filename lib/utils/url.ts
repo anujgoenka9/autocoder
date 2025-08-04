@@ -1,5 +1,5 @@
 export const getURL = () => {
-  const url = process.env.BASE_URL
+  const url = process.env.VERCEL_PROJECT_PRODUCTION_URL
   
   if (!url) {
     throw new Error('BASE_URL environment variable is not set')
