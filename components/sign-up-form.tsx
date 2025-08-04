@@ -36,6 +36,14 @@ export function SignUpForm() {
     }
 
     try {
+      const emailRedirectTo = getAuthCallbackURL(redirect || undefined, priceId || undefined)
+      
+      console.log('🔍 SignUp Debug:', {
+        emailRedirectTo,
+        redirect,
+        priceId
+      })
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -43,7 +51,7 @@ export function SignUpForm() {
           data: {
             full_name: name.trim() || email.split('@')[0], // Use name or fallback to email prefix
           },
-          emailRedirectTo: getAuthCallbackURL(redirect || undefined, priceId || undefined),
+          emailRedirectTo,
         },
       });
       if (error) throw error;
