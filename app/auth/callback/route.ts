@@ -8,6 +8,15 @@ export async function GET(request: NextRequest) {
   const priceId = searchParams.get('priceId')
   const type = searchParams.get('type')
 
+  console.log('🔍 Auth Callback Debug:', {
+    url: request.url,
+    code: code,
+    redirect: redirect,
+    priceId: priceId,
+    type: type,
+    allParams: Object.fromEntries(searchParams.entries())
+  })
+
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
@@ -39,5 +48,6 @@ export async function GET(request: NextRequest) {
   }
 
   // If there's an error or no code, redirect to sign-in
+  console.log('🔍 Auth Callback: No code found, redirecting to sign-in with error')
   return NextResponse.redirect(`${origin}/sign-in?error=auth_callback_error`)
 }
