@@ -10,8 +10,15 @@ export const getURL = () => {
     throw new Error('NEXT_PUBLIC_BASE_URL environment variable is not set')
   }
   
-  // Make sure to include a trailing `/`.
-  const finalUrl = url.endsWith('/') ? url : `${url}/`
+  // Make sure to include https:// and trailing /
+  let finalUrl = url
+  if (!finalUrl.startsWith('http')) {
+    finalUrl = `https://${finalUrl}`
+  }
+  if (!finalUrl.endsWith('/')) {
+    finalUrl = `${finalUrl}/`
+  }
+  
   console.log('🔍 getURL Final URL:', finalUrl)
   
   return finalUrl
