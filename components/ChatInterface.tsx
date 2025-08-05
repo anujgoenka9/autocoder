@@ -6,16 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { Send, Bot, User, Edit3, Check, X } from 'lucide-react';
-import { updateProjectNameAction, loadProjectById, saveChatMessageToDatabase, sendMessageToAgent } from '@/app/api/chat/actions';
+import { updateProjectNameAction, loadProjectById, saveChatMessageToDatabase, streamMessageToAgent } from '@/app/api/chat/actions';
 import { useUser } from '@/hooks/useUser';
 import { fetchUserCredits } from '@/lib/utils/credits-client';
-
 
 interface Message {
   id: string;
   content: string;
-  type: 'user' | 'ai';
+  type: 'user' | 'ai' | 'status';
   timestamp: Date;
+  isStreaming?: boolean;
 }
 
 interface ChatInterfaceProps {
@@ -39,6 +39,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
   const [editingName, setEditingName] = useState('');
   const [isUpdatingName, setIsUpdatingName] = useState(false);
   const [credits, setCredits] = useState<number>(0);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   
   // Get current user
   const { user, isLoading: isLoadingUser } = useUser();
@@ -223,12 +224,68 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
         return;
       }
 
-      // Send message to agent using server action
-      const agentResult = await sendMessageToAgent(
+      // Create a streaming message ID for real-time updates
+      const streamingId = generateMessageId();
+      setStreamingMessageId(streamingId);
+
+      // Add initial streaming message
+      const streamingMessage: Message = {
+        id: streamingId,
+        content: '🚀 Starting to build your app...',
+        type: 'status',
+        timestamp: new Date(),
+        isStreaming: true
+      };
+      setMessages(prev => [...prev, streamingMessage]);
+
+      // Stream message to agent
+      const agentResult = await streamMessageToAgent(
         messageContent,
         currentProjectId.current,
         user.id.toString(),
-        messages.map(msg => ({ type: msg.type, content: msg.content }))
+        messages.map(msg => ({ type: msg.type, content: msg.content })),
+        (type: string, data: any) => {
+          // Handle real-time streaming updates
+          if (streamingMessageId) {
+            setMessages(prev => prev.map(msg => {
+              if (msg.id === streamingMessageId) {
+                switch (type) {
+                  case 'status':
+                    return {
+                      ...msg,
+                      content: data.message || msg.content,
+                      timestamp: new Date()
+                    };
+                  case 'output':
+                    return {
+                      ...msg,
+                      content: msg.content + '\n' + (data.message || ''),
+                      timestamp: new Date()
+                    };
+                  case 'complete':
+                    return {
+                      ...msg,
+                      content: msg.content + '\n\n✅ ' + (data.task_summary || 'Project completed successfully!'),
+                      type: 'ai' as const,
+                      isStreaming: false,
+                      timestamp: new Date()
+                    };
+                  case 'error':
+                    return {
+                      ...msg,
+                      content: '❌ ' + (data.message || 'An error occurred'),
+                      type: 'ai' as const,
+                      isStreaming: false,
+                      timestamp: new Date()
+                    };
+                  default:
+                    return msg;
+                }
+              }
+              return msg;
+            }));
+          }
+        }
       );
 
       if (!agentResult.success) {
@@ -255,13 +312,6 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
         const projectIdForDb = currentProjectId.current || result.project_id;
         if (!projectIdForDb) {
           console.error('No project ID available for database operations');
-          const aiMessage: Message = {
-            id: generateMessageId(),
-            content: result.task_summary || 'Project created successfully!',
-            type: 'ai',
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, aiMessage]);
           return;
         }
 
@@ -275,14 +325,17 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
         );
 
         if (dbResult.success) {
-          // Keep the temp user message and add the AI response with real database ID
-          const aiMessage: Message = {
-            id: dbResult.aiMessage!.id,
-            content: result.task_summary || 'Project created successfully!',
-            type: 'ai',
-            timestamp: dbResult.aiMessage!.timestamp,
-          };
-          setMessages(prev => [...prev, aiMessage]);
+          // Update the streaming message with the real database ID
+          setMessages(prev => prev.map(msg => {
+            if (msg.id === streamingMessageId) {
+              return {
+                ...msg,
+                id: dbResult.aiMessage!.id,
+                isStreaming: false
+              };
+            }
+            return msg;
+          }));
           
           // Update credits in real-time if deduction was successful
           if (dbResult.creditDeduction?.success && typeof dbResult.creditDeduction.remainingCredits === 'number') {
@@ -295,13 +348,6 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
         } else {
           // If database save failed, keep the temp messages but log the error
           console.error('Failed to save to database:', dbResult.error);
-          const aiMessage: Message = {
-            id: generateMessageId(),
-            content: result.task_summary || 'Project created successfully!',
-            type: 'ai',
-            timestamp: new Date()
-          };
-          setMessages(prev => [...prev, aiMessage]);
         }
 
         // If we have a sandbox URL, we could show it in a special way
@@ -311,7 +357,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
         }
       } else {
         // Remove temp message and show error
-        setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
+        setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id && msg.id !== streamingMessageId));
         console.error('Failed to send message:', result.error);
         
         // Show error message to user
@@ -325,7 +371,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
       }
     } catch (error) {
       // Remove temp message on error
-      setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id));
+      setMessages(prev => prev.filter(msg => msg.id !== tempUserMessage.id && msg.id !== streamingMessageId));
       console.error('Error sending message:', error);
       
       // Show error message to user
@@ -338,6 +384,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
+      setStreamingMessageId(null);
     }
   };
 
@@ -444,10 +491,14 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                 message.type === 'user' 
                   ? 'bg-chat-user' 
+                  : message.type === 'status'
+                  ? 'bg-blue-500'
                   : 'bg-gradient-primary'
               }`}>
                 {message.type === 'user' ? (
                   <User className="w-4 h-4 text-white" />
+                ) : message.type === 'status' ? (
+                  <div className="w-4 h-4 text-white animate-spin">⚡</div>
                 ) : (
                   <Bot className="w-4 h-4 text-white" />
                 )}
@@ -456,10 +507,19 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
                 <div className={`rounded-lg p-3 ${
                   message.type === 'user'
                     ? 'bg-chat-user text-white'
+                    : message.type === 'status'
+                    ? 'bg-blue-100 border border-blue-200 text-blue-800'
                     : 'bg-chat-ai border border-chat-border text-foreground'
                 }`}>
                   <div className="whitespace-pre-wrap">
                     {message.content}
+                    {message.isStreaming && (
+                      <div className="flex gap-1 mt-2">
+                        <div className="w-2 h-2 bg-current rounded-full animate-bounce" />
+                        <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                        <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -469,7 +529,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
             </div>
           ))}
           
-          {isTyping && (
+          {isTyping && !streamingMessageId && (
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center">
                 <Bot className="w-4 h-4 text-white" />

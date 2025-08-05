@@ -191,7 +191,6 @@ export async function sendMessageToAgent(
   conversationHistory: Array<{ type: string; content: string }> = []
 ) {
   try {
-    const isNewProject = !projectId || conversationHistory.length === 0;
     const agentApiUrl = process.env.AGENT_API_BASE_URL;
     
     if (!agentApiUrl) {
@@ -200,21 +199,20 @@ export async function sendMessageToAgent(
 
     // Ensure the URL has a protocol
     const baseUrl = agentApiUrl.startsWith('http') ? agentApiUrl : `https://${agentApiUrl}`;
-    const apiUrl = `${baseUrl}/api/agent/${isNewProject ? 'new' : 'continue'}`;
+    const apiUrl = `${baseUrl}/api/agent`;
     
-    // Prepare request body
-    const requestBody = isNewProject ? {
-      task: messageContent,
+    // Prepare request body - simplified structure for new API
+    const requestBody = {
+      user_id: userId,
       project_id: projectId || `project-${Date.now()}`,
-      user_id: userId,
-    } : {
       task: messageContent,
-      project_id: projectId!,
-      user_id: userId,
-      conversation_history: conversationHistory.map(msg => `${msg.type}: ${msg.content}`).join('\n'),
+      conversation_history: conversationHistory.length > 0 
+        ? conversationHistory.map(msg => `${msg.type}: ${msg.content}`).join('\n')
+        : undefined,
+      model: "google/gemini-2.5-flash" // Default model
     };
     
-    console.log('Making API request to:', apiUrl);
+    console.log('Making streaming API request to:', apiUrl);
     console.log('Request body:', requestBody);
     
     const response = await fetch(apiUrl, {
@@ -231,22 +229,129 @@ export async function sendMessageToAgent(
       throw new Error(`Agent API responded with status: ${response.status}`);
     }
     
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(`Agent API returned error: ${result.error || 'Unknown error'}`);
-    }
-    
+    // For now, we'll return a success response that indicates streaming
+    // The actual streaming will be handled by the frontend component
     return {
       success: true,
-      data: result,
-      projectId: result.project_id || projectId,
+      data: {
+        success: true,
+        project_id: requestBody.project_id,
+        streaming: true,
+        message: 'Streaming response initiated'
+      },
+      projectId: requestBody.project_id,
     };
   } catch (error) {
     console.error('Failed to send message to agent:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to send message to agent',
+    };
+  }
+}
+
+// New function to handle streaming responses
+export async function streamMessageToAgent(
+  messageContent: string,
+  projectId: string | null,
+  userId: string,
+  conversationHistory: Array<{ type: string; content: string }> = [],
+  onMessage?: (type: string, data: any) => void
+) {
+  try {
+    const agentApiUrl = process.env.AGENT_API_BASE_URL;
+    
+    if (!agentApiUrl) {
+      throw new Error('AGENT_API_BASE_URL environment variable is not set');
+    }
+
+    // Ensure the URL has a protocol
+    const baseUrl = agentApiUrl.startsWith('http') ? agentApiUrl : `https://${agentApiUrl}`;
+    const apiUrl = `${baseUrl}/api/agent`;
+    
+    // Prepare request body
+    const requestBody = {
+      user_id: userId,
+      project_id: projectId || `project-${Date.now()}`,
+      task: messageContent,
+      conversation_history: conversationHistory.length > 0 
+        ? conversationHistory.map(msg => `${msg.type}: ${msg.content}`).join('\n')
+        : undefined,
+      model: "google/gemini-2.5-flash"
+    };
+    
+    console.log('Making streaming API request to:', apiUrl);
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Agent API responded with status: ${response.status}`);
+    }
+    
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body available for streaming');
+    }
+    
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finalResult: any = null;
+    
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            
+            if (onMessage) {
+              onMessage(data.type, data.data);
+            }
+            
+            // Store final result for completion
+            if (data.type === 'complete') {
+              finalResult = {
+                success: true,
+                project_id: requestBody.project_id,
+                sandbox_url: data.data.sandbox_url,
+                files_created: data.data.files_created,
+                task_summary: data.data.task_summary
+              };
+            }
+          } catch (parseError) {
+            console.warn('Failed to parse SSE data:', line, parseError);
+          }
+        }
+      }
+    }
+    
+    return {
+      success: true,
+      data: finalResult || {
+        success: true,
+        project_id: requestBody.project_id,
+        message: 'Streaming completed'
+      },
+      projectId: requestBody.project_id,
+    };
+  } catch (error) {
+    console.error('Failed to stream message to agent:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to stream message to agent',
     };
   }
 } 
