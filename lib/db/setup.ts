@@ -231,7 +231,7 @@ async function main() {
   const STRIPE_WEBHOOK_SECRET = await createStripeWebhook();
   const BASE_URL = 'http://localhost:3000';
   const AUTH_SECRET = generateAuthSecret();
-  const AGENT_API_BASE_URL = 'http://localhost:8000';
+  const NEXT_PUBLIC_AGENT_API_BASE_URL = 'http://localhost:8000';
   const NGROK_URL = await setupRealTimePreview();
 
   await writeEnvFile({
@@ -240,7 +240,7 @@ async function main() {
     STRIPE_WEBHOOK_SECRET,
     BASE_URL,
     AUTH_SECRET,
-    AGENT_API_BASE_URL,
+    NEXT_PUBLIC_AGENT_API_BASE_URL,
     NGROK_URL,
   });
 

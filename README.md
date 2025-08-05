@@ -1,21 +1,19 @@
 # AutoCoder
 
-This is a starter template for building a SaaS application using **Next.js** with support for authentication, Stripe integration for payments, and a dashboard for logged-in users.
+This is an AI-powered code generation SaaS application built with **Next.js** that allows users to create and modify Next.js projects using natural language. It includes authentication, Stripe integration for payments, and a dashboard for managing AI-generated code projects.
 
 **Demo: [https://www.autocodingai.space/](https://www.autocodingai.space/)**
 
 ## Features
 
-- Marketing landing page (`/`) with animated Terminal element
-- Pricing page (`/pricing`) which connects to Stripe Checkout
-- Dashboard pages with CRUD operations on users/teams
-- Basic RBAC with Owner and Member roles
-- Subscription management with Stripe Customer Portal
-- Email/password authentication with JWTs stored to cookies
-- Global middleware to protect logged-in routes
-- Local middleware to protect Server Actions or validate Zod schemas
-- Activity logging system for any user events
 - **AI Code Generation**: Intelligent agent that can create and modify Next.js projects using natural language
+- **Project Management**: Dashboard for managing AI-generated code projects with CRUD operations
+- **Team Collaboration**: Basic RBAC with Owner and Member roles for team-based development
+- **Subscription Management**: Stripe integration with Customer Portal for managing AI usage plans
+- **Authentication**: Email/password authentication with JWTs stored to cookies
+- **Security**: Global middleware to protect logged-in routes and local middleware for Server Actions
+- **Marketing**: Landing page with animated Terminal element showcasing AI capabilities
+- **Pricing**: Transparent pricing page connected to Stripe Checkout for AI usage plans
 
 ## Tech Stack
 
@@ -24,14 +22,16 @@ This is a starter template for building a SaaS application using **Next.js** wit
 - **ORM**: [Drizzle](https://orm.drizzle.team/)
 - **Payments**: [Stripe](https://stripe.com/)
 - **UI Library**: [shadcn/ui](https://ui.shadcn.com/)
-- **AI Agent**: [LangGraph](https://github.com/langchain-ai/langgraph) + [E2B](https://e2b.dev/)
+- **AI Agent**: [LangGraph](https://www.langchain.com/langgraph) 
+- **LLM Observability**: [LangSmith](https://www.langchain.com/langsmith)
+- **Sandbox**: [E2B](https://e2b.dev/)
 - **API**: [FastAPI](https://fastapi.tiangolo.com/)
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/nextjs/saas-starter
-cd saas-starter
+git clone https://github.com/anujgoenka9/autocoder
+cd autocoder
 pnpm install
 ```
 
@@ -68,12 +68,12 @@ pnpm db:migrate
 pnpm db:seed
 ```
 
-This will create the following user and team:
+This will create the following default user for testing AutoCoder:
 
 - User: `test@test.com`
 - Password: `admin123`
 
-You can also create new users through the `/sign-up` route.
+You can also create new users through the `/sign-up` route to start generating AI-powered code projects.
 
 Finally, run the Next.js development server:
 
@@ -81,7 +81,7 @@ Finally, run the Next.js development server:
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see the app in action.
+Open [http://localhost:3000](http://localhost:3000) in your browser to see AutoCoder in action. You can start by creating a new project and using natural language to generate Next.js code!
 
 You can listen for Stripe webhooks locally through their CLI to handle subscription change events:
 

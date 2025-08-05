@@ -44,9 +44,5 @@ postgres_data/
 .venv
 __pycache__
 
-/agent
-
-/ai-sdk-preview-python-streaming-main
-/vercel examples main python-nextjs-flask
-/supabase-auth-example
-/Coding Agent API
+/Coding Agent API/.env
+/Coding Agent API/.venv
