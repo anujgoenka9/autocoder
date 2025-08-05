@@ -56,6 +56,17 @@ export async function updateProjectNameAction(projectId: string, newName: string
 
 export async function createNewProject() {
   try {
+    // Check if user is authenticated first
+    const { getUser } = await import('@/lib/db/queries');
+    const user = await getUser();
+    
+    if (!user) {
+      return {
+        success: false,
+        error: 'User not authenticated',
+      };
+    }
+    
     const project = await createProject('New Project');
     
     return {
@@ -67,7 +78,7 @@ export async function createNewProject() {
     console.error('Failed to create new project:', error);
     return {
       success: false,
-      error: 'Failed to create new project',
+      error: error instanceof Error ? error.message : 'Failed to create new project',
     };
   }
 }
@@ -77,15 +88,17 @@ export async function loadProjectById(projectId: string) {
     const project = await getProjectById(projectId);
     const messages = await getProjectMessages(projectId);
     
+    const mappedMessages = messages.map(msg => ({
+      id: msg.id,
+      content: msg.content,
+      type: (msg.role === 'ASSISTANT' ? 'ai' : 'user') as 'user' | 'ai',
+      timestamp: msg.createdAt,
+    }));
+    
     return {
       success: true,
       project,
-      messages: messages.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        type: msg.role.toLowerCase() as 'user' | 'ai',
-        timestamp: msg.createdAt,
-      })),
+      messages: mappedMessages,
     };
   } catch (error) {
     console.error('Failed to load project:', error);
@@ -250,108 +263,4 @@ export async function sendMessageToAgent(
   }
 }
 
-// New function to handle streaming responses
-export async function streamMessageToAgent(
-  messageContent: string,
-  projectId: string | null,
-  userId: string,
-  conversationHistory: Array<{ type: string; content: string }> = [],
-  onMessage?: (type: string, data: any) => void
-) {
-  try {
-    const agentApiUrl = process.env.AGENT_API_BASE_URL;
-    
-    if (!agentApiUrl) {
-      throw new Error('AGENT_API_BASE_URL environment variable is not set');
-    }
-
-    // Ensure the URL has a protocol
-    const baseUrl = agentApiUrl.startsWith('http') ? agentApiUrl : `https://${agentApiUrl}`;
-    const apiUrl = `${baseUrl}/api/agent`;
-    
-    // Prepare request body
-    const requestBody = {
-      user_id: userId,
-      project_id: projectId || `project-${Date.now()}`,
-      task: messageContent,
-      conversation_history: conversationHistory.length > 0 
-        ? conversationHistory.map(msg => `${msg.type}: ${msg.content}`).join('\n')
-        : undefined,
-      model: "google/gemini-2.5-flash"
-    };
-    
-    console.log('Making streaming API request to:', apiUrl);
-    
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Agent API responded with status: ${response.status}`);
-    }
-    
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('No response body available for streaming');
-    }
-    
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let finalResult: any = null;
-    
-    while (true) {
-      const { done, value } = await reader.read();
-      
-      if (done) break;
-      
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-      
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6));
-            
-            if (onMessage) {
-              onMessage(data.type, data.data);
-            }
-            
-            // Store final result for completion
-            if (data.type === 'complete') {
-              finalResult = {
-                success: true,
-                project_id: requestBody.project_id,
-                sandbox_url: data.data.sandbox_url,
-                files_created: data.data.files_created,
-                task_summary: data.data.task_summary
-              };
-            }
-          } catch (parseError) {
-            console.warn('Failed to parse SSE data:', line, parseError);
-          }
-        }
-      }
-    }
-    
-    return {
-      success: true,
-      data: finalResult || {
-        success: true,
-        project_id: requestBody.project_id,
-        message: 'Streaming completed'
-      },
-      projectId: requestBody.project_id,
-    };
-  } catch (error) {
-    console.error('Failed to stream message to agent:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to stream message to agent',
-    };
-  }
-} 
+ 

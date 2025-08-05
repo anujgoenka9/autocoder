@@ -6,14 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { Send, Bot, User, Edit3, Check, X } from 'lucide-react';
-import { updateProjectNameAction, loadProjectById, saveChatMessageToDatabase, streamMessageToAgent } from '@/app/api/chat/actions';
+import { updateProjectNameAction, loadProjectById, saveChatMessageToDatabase } from '@/app/api/chat/actions';
+import { streamMessageToAgent } from '@/lib/utils/streaming-client';
 import { useUser } from '@/hooks/useUser';
 import { fetchUserCredits } from '@/lib/utils/credits-client';
 
 interface Message {
   id: string;
   content: string;
-  type: 'user' | 'ai' | 'status';
+  type: 'user' | 'ai';
   timestamp: Date;
   isStreaming?: boolean;
 }
@@ -40,6 +41,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
   const [isUpdatingName, setIsUpdatingName] = useState(false);
   const [credits, setCredits] = useState<number>(0);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(0);
   
   // Get current user
   const { user, isLoading: isLoadingUser } = useUser();
@@ -95,22 +97,24 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
 
   // Handle prefill message from suggestion chat
   useEffect(() => {
-    if (!isLoading && !isLoadingUser && user && messages.length === 0) {
+    if (!isLoading && !isLoadingUser && user && messages.length === 0 && currentProjectId.current) {
       const prefillMessage = localStorage.getItem('prefillMessage');
       if (prefillMessage) {
+        console.log('Found prefill message, will send after delay:', prefillMessage);
         // Clear the stored message
         localStorage.removeItem('prefillMessage');
         // Prefill the input and send automatically after a short delay
         setInput(prefillMessage);
-        // Send after everything is loaded
+        // Send after everything is loaded and project is ready
         const timer = setTimeout(() => {
+          console.log('Sending prefill message:', prefillMessage);
           sendMessage(prefillMessage);
-        }, 500); // Small delay to ensure everything is ready
+        }, 1000); // Increased delay to ensure project is fully ready
         
         return () => clearTimeout(timer);
       }
     }
-  }, [isLoading, isLoadingUser, user, messages.length]);
+  }, [isLoading, isLoadingUser, user, messages.length, currentProjectId.current]);
 
   // Focus edit input when editing starts
   useEffect(() => {
@@ -227,64 +231,102 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
       // Create a streaming message ID for real-time updates
       const streamingId = generateMessageId();
       setStreamingMessageId(streamingId);
+      setLastUpdateTime(Date.now()); // Reset timing for new streaming session
 
-      // Add initial streaming message
+      // Add initial empty streaming message
       const streamingMessage: Message = {
         id: streamingId,
-        content: '🚀 Starting to build your app...',
-        type: 'status',
+        content: '',
+        type: 'ai',
         timestamp: new Date(),
         isStreaming: true
       };
       setMessages(prev => [...prev, streamingMessage]);
 
+      // Get conversation history from database only
+      let conversationHistory: Array<{ type: string; content: string }> = [];
+      
+      if (currentProjectId.current) {
+        try {
+          const { loadProjectById } = await import('@/app/api/chat/actions');
+          const projectData = await loadProjectById(currentProjectId.current);
+          
+          if (projectData.success && projectData.messages) {
+            conversationHistory = projectData.messages
+              .filter(msg => msg.type === 'user' || msg.type === 'ai')
+              .map(msg => ({ type: msg.type, content: msg.content }));
+          }
+        } catch (error) {
+          console.error('Failed to load conversation history from database:', error);
+        }
+      }
       // Stream message to agent
       const agentResult = await streamMessageToAgent(
         messageContent,
         currentProjectId.current,
         user.id.toString(),
-        messages.map(msg => ({ type: msg.type, content: msg.content })),
+        conversationHistory,
         (type: string, data: any) => {
-          // Handle real-time streaming updates
-          if (streamingMessageId) {
-            setMessages(prev => prev.map(msg => {
-              if (msg.id === streamingMessageId) {
-                switch (type) {
-                  case 'status':
-                    return {
-                      ...msg,
-                      content: data.message || msg.content,
-                      timestamp: new Date()
-                    };
-                  case 'output':
-                    return {
-                      ...msg,
-                      content: msg.content + '\n' + (data.message || ''),
-                      timestamp: new Date()
-                    };
-                  case 'complete':
-                    return {
-                      ...msg,
-                      content: msg.content + '\n\n✅ ' + (data.task_summary || 'Project completed successfully!'),
-                      type: 'ai' as const,
-                      isStreaming: false,
-                      timestamp: new Date()
-                    };
-                  case 'error':
-                    return {
-                      ...msg,
-                      content: '❌ ' + (data.message || 'An error occurred'),
-                      type: 'ai' as const,
-                      isStreaming: false,
-                      timestamp: new Date()
-                    };
-                  default:
-                    return msg;
-                }
-              }
-              return msg;
-            }));
+          // Handle real-time streaming updates with timing controls
+          const now = Date.now();
+          
+          // Minimum display time for each message (200ms)
+          if (type === 'status' || type === 'output') {
+            if (now - lastUpdateTime < 200) {
+              return; // Skip update if too soon
+            }
+            setLastUpdateTime(now);
           }
+          
+          // Brief pause before showing completion (500ms)
+          if (type === 'complete') {
+            setTimeout(() => {
+              setMessages(prev => prev.map(msg => {
+                if (msg.id === streamingId) {
+                  return {
+                    ...msg,
+                    content: data.task_summary || 'Project completed successfully!',
+                    type: 'ai' as const,
+                    isStreaming: false,
+                    timestamp: new Date()
+                  };
+                }
+                return msg;
+              }));
+            }, 1000);
+            return;
+          }
+          
+          // Handle status, output, and error messages
+          setMessages(prev => prev.map(msg => {
+            if (msg.id === streamingId) {
+              switch (type) {
+                case 'status':
+                  return {
+                    ...msg,
+                    content: msg.content + '\n' + (data.message || ''),
+                    timestamp: new Date()
+                  };
+                case 'output':
+                  return {
+                    ...msg,
+                    content: msg.content + '\n' + (data.message || ''),
+                    timestamp: new Date()
+                  };
+                case 'error':
+                  return {
+                    ...msg,
+                    content: msg.content + '\n\n❌ ' + (data.message || 'An error occurred'),
+                    type: 'ai' as const,
+                    isStreaming: false,
+                    timestamp: new Date()
+                  };
+                default:
+                  return msg;
+              }
+            }
+            return msg;
+          }));
         }
       );
 
@@ -491,35 +533,27 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
                 message.type === 'user' 
                   ? 'bg-chat-user' 
-                  : message.type === 'status'
-                  ? 'bg-blue-500'
                   : 'bg-gradient-primary'
               }`}>
                 {message.type === 'user' ? (
                   <User className="w-4 h-4 text-white" />
-                ) : message.type === 'status' ? (
-                  <div className="w-4 h-4 text-white animate-spin">⚡</div>
                 ) : (
                   <Bot className="w-4 h-4 text-white" />
                 )}
               </div>
+              {message.isStreaming && (
+                <div className="w-4 h-4 border border-foreground/30 border-t-foreground rounded-full animate-spin shrink-0" />
+              )}
               <div className="max-w-[80%]">
                 <div className={`rounded-lg p-3 ${
                   message.type === 'user'
                     ? 'bg-chat-user text-white'
-                    : message.type === 'status'
-                    ? 'bg-blue-100 border border-blue-200 text-blue-800'
+                    : message.isStreaming
+                    ? 'bg-chat-ai/50 border border-chat-border text-foreground/70'
                     : 'bg-chat-ai border border-chat-border text-foreground'
                 }`}>
                   <div className="whitespace-pre-wrap">
                     {message.content}
-                    {message.isStreaming && (
-                      <div className="flex gap-1 mt-2">
-                        <div className="w-2 h-2 bg-current rounded-full animate-bounce" />
-                        <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                        <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                      </div>
-                    )}
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">

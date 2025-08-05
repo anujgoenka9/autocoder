@@ -38,21 +38,9 @@ export async function getUser() {
       return newUser;
     } catch (error) {
       console.error('Error creating user in database:', error);
-      // If user creation fails, still return a basic user object so auth doesn't break
-      return {
-        id: supabaseUser.id,
-        email: supabaseUser.email!,
-        name: supabaseUser.user_metadata?.full_name || supabaseUser.email!.split('@')[0],
-        role: 'member' as const,
-        credits: 0,
-        subscriptionPlan: 'base' as const,
-        subscriptionStatus: 'inactive' as const,
-        stripeCustomerId: null,
-        stripeSubscriptionId: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        deletedAt: null
-      };
+      // Don't return a fallback user object - if creation fails, return null
+      // This prevents foreign key constraint violations
+      return null;
     }
   }
 
@@ -140,13 +128,18 @@ export async function createProject(name: string) {
     throw new Error('User not authenticated');
   }
 
-  const newProject: NewProject = {
-    name,
-    userId: user.id,
-  };
+      const newProject: NewProject = {
+      name,
+      userId: user.id,
+    };
 
-  const [project] = await db.insert(projects).values(newProject).returning();
-  return project;
+    try {
+      const [project] = await db.insert(projects).values(newProject).returning();
+      return project;
+    } catch (error) {
+      console.error('Error creating project:', error);
+      throw error;
+    }
 }
 
 export async function getCurrentOrCreateProject() {
