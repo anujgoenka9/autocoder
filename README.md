@@ -1,128 +1,189 @@
 # AutoCoder
 
-This is an AI-powered code generation SaaS application built with **Next.js** that allows users to create and modify Next.js projects using natural language. It includes authentication, Stripe integration for payments, and a dashboard for managing AI-generated code projects.
+An AI-powered code generation SaaS application built with **Next.js** that allows users to create and modify Next.js projects using natural language. The application features a sophisticated AI agent that can generate, modify, and execute code in real-time sandbox environments.
 
 **Demo: [https://www.autocodingai.space/](https://www.autocodingai.space/)**
 
-## Features
-
-- **AI Code Generation**: Intelligent agent that can create and modify Next.js projects using natural language
-- **Project Management**: Dashboard for managing AI-generated code projects with CRUD operations
-- **Team Collaboration**: Basic RBAC with Owner and Member roles for team-based development
-- **Subscription Management**: Stripe integration with Customer Portal for managing AI usage plans
-- **Authentication**: Email/password authentication with JWTs stored to cookies
-- **Security**: Global middleware to protect logged-in routes and local middleware for Server Actions
-- **Marketing**: Landing page with animated Terminal element showcasing AI capabilities
-- **Pricing**: Transparent pricing page connected to Stripe Checkout for AI usage plans
-
 ## Tech Stack
 
-- **Framework**: [Next.js](https://nextjs.org/)
-- **Database and Auth**: [Supabase](https://supabase.com//)
-- **ORM**: [Drizzle](https://orm.drizzle.team/)
-- **Payments**: [Stripe](https://stripe.com/)
-- **UI Library**: [shadcn/ui](https://ui.shadcn.com/)
-- **AI Agent**: [LangGraph](https://www.langchain.com/langgraph) 
-- **LLM Observability**: [LangSmith](https://www.langchain.com/langsmith)
-- **Sandbox**: [E2B](https://e2b.dev/)
-- **API**: [FastAPI](https://fastapi.tiangolo.com/)
+### Frontend & Framework
+- **Framework**: [Next.js 15](https://nextjs.org/) with App Router and Turbopack
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **UI Library**: [shadcn/ui](https://ui.shadcn.com/) with Radix UI primitives
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) with custom animations
+- **State Management**: [SWR](https://swr.vercel.app/) for client-side data fetching
+- **Icons**: [Lucide React](https://lucide.dev/)
+
+### Backend & Database
+- **Database**: [PostgreSQL](https://www.postgresql.org/) via Supabase
+- **ORM**: [Drizzle ORM](https://orm.drizzle.team/) with type-safe queries
+- **Authentication**: [Supabase Auth](https://supabase.com/auth) with SSR support
+- **Pub/Sub**: [Redis](https://redis.io/) for real-time SSE connections
+- **Payments**: [Stripe](https://stripe.com/) with webhooks for subscription management
+
+### AI & Code Execution
+- **AI Agent**: Custom LangGraph-based agent deployed as separate FastAPI service
+- **LLM**: [Google Gemini 2.5 Flash](https://ai.google.dev/gemini) via OpenRouter
+- **Code Sandbox**: [E2B](https://e2b.dev/) for isolated code execution environments
+- **Agent Observability**: [LangSmith](https://www.langchain.com/langsmith) (optional)
+- **Streaming**: Real-time streaming responses via Server-Sent Events
+
+### Infrastructure & Deployment
+- **Frontend Deployment**: [Vercel](https://vercel.com/)
+- **Agent API Deployment**: [Railway](https://railway.app/) (separate service)
+- **Database Hosting**: [Supabase](https://supabase.com/)
+- **Redis Hosting**: [Upstash](https://upstash.com/) or similar
+- **Environment**: Node.js 18+ with pnpm package manager
+
+## Architecture Overview
+
+### Frontend Architecture
+- **App Router**: Next.js 15 App Router with route groups for authentication and dashboard
+- **Server Components**: Hybrid approach with server and client components
+- **Middleware**: Global middleware for authentication and route protection
+- **API Routes**: RESTful API routes for chat, projects, payments, and webhooks
+- **Real-time**: SSE connections for live project updates and collaboration
+
+### Backend Architecture
+- **Database Schema**: Users, Projects, Messages, and Fragments with proper relations
+- **Authentication Flow**: Supabase Auth with JWT cookies and SSR support
+- **Credit System**: Pay-per-use system with monthly allocations and billing cycles
+- **Payment Integration**: Stripe Checkout with webhook handling for subscriptions
+- **File Management**: JSON-based file storage with real-time preview capabilities
+
+### AI Agent Architecture
+- **Separate Service**: FastAPI-based agent deployed independently
+- **LangGraph Workflow**: State-based workflow with tool execution
+- **Sandbox Integration**: E2B sandbox for isolated code execution
+- **Streaming**: Real-time streaming of agent execution and code generation
+- **Session Management**: Persistent project sessions across conversations
 
 ## Getting Started
 
+### Installation
+
+1. **Clone the repository**
 ```bash
 git clone https://github.com/anujgoenka9/autocoder
 cd autocoder
+```
+
+2. **Install dependencies**
+```bash
 pnpm install
 ```
 
-## Running Locally
-
-[Install](https://docs.stripe.com/stripe-cli) and log in to your Stripe account:
-
+3. **Set up environment variables**
 ```bash
-stripe login
+# Copy the example environment file
+cp .env.example .env
+
+# Populate the required environment variables in .env
 ```
 
-Use the included setup script to create your `.env` file:
+### Development
 
-```bash
-pnpm db:setup
-```
-
-Set up your Python agent API keys in your `.env` file:
-
-```bash
-# Add these to your .env file
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-E2B_API_KEY=your_e2b_api_key_here
-```
-
-To get these API keys:
-- **OpenRouter**: Sign up at [openrouter.ai](https://openrouter.ai/) and get your API key
-- **E2B**: Sign up at [e2b.dev](https://e2b.dev/) and get your API key
-
-Run the database migrations and seed the database with a default user and team:
-
-```bash
-pnpm db:migrate
-pnpm db:seed
-```
-
-This will create the following default user for testing AutoCoder:
-
-- User: `test@test.com`
-- Password: `admin123`
-
-You can also create new users through the `/sign-up` route to start generating AI-powered code projects.
-
-Finally, run the Next.js development server:
-
+1. **Start the development server**
 ```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to see AutoCoder in action. You can start by creating a new project and using natural language to generate Next.js code!
-
-You can listen for Stripe webhooks locally through their CLI to handle subscription change events:
-
+2. **Set up the AI Agent API (separate service)**
 ```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
+# Navigate to the AI agent directory
+cd "Coding Agent API"
+
+# Build the Docker image
+docker build -t autocoder-agent .
+
+# Run the container
+docker run -p 8000:8000 autocoder-agent
 ```
 
-## Testing Payments
+3. **Access the application**
+   - Frontend: http://localhost:3000
+   - AI Agent API: http://localhost:8000
 
-To test Stripe payments, use the following test card details:
+### Production Deployment
 
-- Card Number: `4242 4242 4242 4242`
-- Expiration: Any future date
-- CVC: Any 3-digit number
+1. **Frontend (Vercel)**
+   - Connect your GitHub repository to Vercel
+   - Set all environment variables in Vercel dashboard
+   - Deploy automatically on push to main branch
 
-## Going to Production
+2. **AI Agent API (Railway)**
+   - Deploy the `Coding Agent API/` directory to Railway
+   - Set environment variables for the agent service
+   - Update `NEXT_PUBLIC_AGENT_API_BASE_URL` in frontend
 
-When you're ready to deploy your SaaS application to production, follow these steps:
+3. **Database (Supabase)**
+   - Create a new Supabase project
+   - Run database migrations: `pnpm db:migrate`
+   - Set up authentication providers
 
-### Set up a production Stripe webhook
+4. **Redis (Upstash)**
+   - Create a Redis instance
+   - Update `REDIS_URL` in environment variables
 
-1. Go to the Stripe Dashboard and create a new webhook for your production environment.
-2. Set the endpoint URL to your production API route (e.g., `https://yourdomain.com/api/stripe/webhook`).
-3. Select the events you want to listen for (e.g., `checkout.session.completed`, `customer.subscription.updated`).
+## Project Structure
 
-### Deploy to Vercel
+```
+saas-starter/
+├── app/                          # Next.js App Router
+│   ├── (dashboard)/             # Protected dashboard routes
+│   ├── (login)/                 # Authentication routes
+│   ├── api/                     # API routes
+│   │   ├── chat/               # Chat and AI interactions
+│   │   ├── projects/           # Project management
+│   │   ├── stripe/             # Payment processing
+│   │   └── user/               # User management
+│   └── layout.tsx              # Root layout
+├── components/                  # React components
+│   ├── ui/                     # shadcn/ui components
+│   ├── ChatInterface.tsx       # Main chat interface
+│   ├── PreviewPanel.tsx        # Code preview panel
+│   └── ...                     # Other components
+├── lib/                        # Utility libraries
+│   ├── db/                     # Database configuration
+│   ├── supabase/               # Supabase client
+│   ├── payments/               # Stripe integration
+│   └── utils/                  # Utility functions
+├── hooks/                      # Custom React hooks
+├── Coding Agent API/           # Separate AI agent service
+│   ├── main.py                # FastAPI application
+│   ├── utils/                 # Agent utilities
+│   └── requirements.txt       # Python dependencies
+└── ...                        # Configuration files
+```
 
-1. Push your code to a GitHub repository.
-2. Connect your repository to [Vercel](https://vercel.com/) and deploy it.
-3. Follow the Vercel deployment process, which will guide you through setting up your project.
+## Key Features Explained
 
-### Add environment variables
+### AI Code Generation
+The application uses a sophisticated AI agent built with LangGraph that can:
+- Understand natural language requirements
+- Generate Next.js code in real-time
+- Execute code in isolated sandbox environments
+- Maintain project context across conversations
+- Stream responses for better user experience
 
-In your Vercel project settings (or during deployment), add all the necessary environment variables. Make sure to update the values for the production environment, including:
+### Real-time Collaboration
+- Server-Sent Events (SSE) for live project updates
+- Redis-based connection management
+- Real-time code preview and file management
+- Collaborative project editing
 
-1. `BASE_URL`: Set this to your production domain.
-2. `STRIPE_SECRET_KEY`: Use your Stripe secret key for the production environment.
-3. `STRIPE_WEBHOOK_SECRET`: Use the webhook secret from the production webhook you created in step 1.
-4. `POSTGRES_URL`: Set this to your production database URL.
-5. `AUTH_SECRET`: Set this to a random string. `openssl rand -base64 32` will generate one.
-6. `OPENROUTER_API_KEY`: Your OpenRouter API key for the AI agent.
-7. `E2B_API_KEY`: Your E2B API key for code execution sandbox.
-8. `VERCEL_URL`: This is automatically set by Vercel during deployment.
+### Credit System
+- Pay-per-use model for AI operations
+- Monthly credit allocations for subscribers
+- Automatic credit deduction for AI interactions
+- Billing cycle management via Stripe webhooks
 
+### Security
+- Supabase Auth with JWT cookies
+- Global middleware for route protection
+- Server-side authentication validation
+- Secure API routes with proper authorization
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

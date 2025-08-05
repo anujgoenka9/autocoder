@@ -78,15 +78,11 @@ const PreviewPanel = ({ projectId }: PreviewPanelProps) => {
     const eventSource = new EventSource(`/api/events/fragments/${projectId}`);
     eventSourceRef.current = eventSource;
     
-    console.log('SSE connection established for project:', projectId);
-    
     eventSource.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('SSE message received:', data);
         
         if (data.type === 'fragment_updated' && data.fragment) {
-          console.log('Fragment update received, updating preview:', data.fragment);
           // Use fragment data directly from SSE message instead of fetching from database
           setFragment(data.fragment);
           setHasFragment(true);

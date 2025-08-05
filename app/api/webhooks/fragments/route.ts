@@ -9,10 +9,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { type, table, schema, record, old_record } = body;
 
-    console.log('Webhook received:', { type, table, project_id: record?.project_id, fragment_id: record?.id });
-
     if (!type || !table || table !== 'fragments') {
-      console.log('Invalid webhook payload:', { type, table });
       return NextResponse.json(
         { error: 'Invalid webhook payload' },
         { status: 400 }
@@ -23,37 +20,29 @@ export async function POST(request: NextRequest) {
     const fragment_id = record?.id;
 
     if (!project_id || !fragment_id) {
-      console.log('Missing project_id or fragment_id:', { project_id, fragment_id });
       return NextResponse.json(
         { error: 'Missing project_id or fragment_id in record' },
         { status: 400 }
       );
     }
 
-    console.log('Broadcasting fragment update for project:', project_id);
-
     // Add a small delay to ensure SSE connection is established
     setTimeout(async () => {
-      try {
-        await broadcastFragmentUpdate(project_id, {
-          type: 'fragment_updated',
-          projectId: project_id,
-          fragmentId: fragment_id,
-          fragment: {
-            id: record.id,
-            projectId: record.project_id,
-            sandboxUrl: record.sandbox_url,
-            files: record.files,
-            createdAt: record.created_at,
-            updatedAt: record.updated_at,
-          },
-          timestamp: new Date().toISOString(),
-          operation: type
-        });
-        console.log('Fragment update broadcasted successfully for project:', project_id);
-      } catch (error) {
-        console.error('Failed to broadcast fragment update:', error);
-      }
+      await broadcastFragmentUpdate(project_id, {
+        type: 'fragment_updated',
+        projectId: project_id,
+        fragmentId: fragment_id,
+        fragment: {
+          id: record.id,
+          projectId: record.project_id,
+          sandboxUrl: record.sandbox_url,
+          files: record.files,
+          createdAt: record.created_at,
+          updatedAt: record.updated_at,
+        },
+        timestamp: new Date().toISOString(),
+        operation: type
+      });
     }, 100);
 
     return NextResponse.json({ 
