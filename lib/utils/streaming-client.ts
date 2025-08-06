@@ -4,10 +4,11 @@ export async function streamMessageToAgent(
   projectId: string | null,
   userId: string,
   conversationHistory: Array<{ type: string; content: string }> = [],
-  onMessage?: (type: string, data: any) => void
+  onMessage?: (type: string, data: any) => void,
+  model: string = "google/gemini-2.5-flash"
 ) {
   try {
-    const agentApiUrl = process.env.NEXT_PUBLIC_AGENT_API_BASE_URL || 'https://coding-agent-production.up.railway.app';
+    const agentApiUrl = process.env.NEXT_PUBLIC_AGENT_API_BASE_URL;
     
     if (!agentApiUrl) {
       throw new Error('Agent API URL is not configured');
@@ -29,7 +30,7 @@ export async function streamMessageToAgent(
       conversation_history: conversationHistory.length > 0 
         ? conversationHistory.map(msg => `${msg.type}: ${msg.content}`).join('\n')
         : undefined,
-      model: "google/gemini-2.5-flash"
+      model: model
     };
     
     const response = await fetch(apiUrl, {

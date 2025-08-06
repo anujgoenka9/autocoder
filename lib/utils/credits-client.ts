@@ -18,36 +18,4 @@ export async function fetchUserCredits(): Promise<number> {
     console.error('Failed to fetch credits:', error);
     return 0;
   }
-}
-
-export async function deductUserCredits(amount: number = 1): Promise<{ success: boolean; remainingCredits?: number; error?: string }> {
-  try {
-    const response = await fetch('/api/user/credits/deduct', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ amount }),
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-      return {
-        success: true,
-        remainingCredits: data.remainingCredits,
-      };
-    } else {
-      return {
-        success: false,
-        error: data.error || 'Failed to deduct credits',
-      };
-    }
-  } catch (error) {
-    console.error('Failed to deduct credits:', error);
-    return {
-      success: false,
-      error: 'Network error',
-    };
-  }
 } 

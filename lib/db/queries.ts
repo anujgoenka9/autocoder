@@ -94,34 +94,6 @@ export async function getUserProjects() {
     .orderBy(desc(projects.createdAt));
 }
 
-export async function getProjectWithMessages(projectId: string) {
-  const user = await getUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  const project = await db
-    .select()
-    .from(projects)
-    .where(and(eq(projects.id, projectId), eq(projects.userId, user.id)))
-    .limit(1);
-
-  if (project.length === 0) {
-    return null;
-  }
-
-  const projectMessages = await db
-    .select()
-    .from(messages)
-    .where(eq(messages.projectId, projectId))
-    .orderBy(messages.createdAt);
-
-  return {
-    project: project[0],
-    messages: projectMessages
-  };
-}
-
 export async function createProject(name: string) {
   const user = await getUser();
   if (!user) {
@@ -352,10 +324,4 @@ export async function upsertFragment(projectId: string, sandboxUrl: string, file
     .returning();
 
   return fragment;
-}
-
-// Keep the old function for backward compatibility but mark as deprecated
-export async function createOrUpdateFragment(projectId: string, sandboxUrl: string, files: Record<string, string>) {
-  console.warn('createOrUpdateFragment is deprecated, use upsertFragment instead');
-  return upsertFragment(projectId, sandboxUrl, files);
 }

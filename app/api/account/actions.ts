@@ -88,12 +88,4 @@ export async function getSubscriptionDetails() {
       error: 'Failed to fetch subscription details'
     };
   }
-}
-
-export async function getAccountActivityLogs() {
-  // Activity logs removed - Supabase handles auth logging
-  return {
-    success: true,
-    logs: []
-  };
 } 

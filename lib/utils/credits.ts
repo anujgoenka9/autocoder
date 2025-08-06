@@ -57,14 +57,6 @@ export async function getCredits(userId: string): Promise<number> {
 }
 
 /**
- * Check if user has sufficient credits
- */
-export async function hasSufficientCredits(userId: string, required: number): Promise<boolean> {
-  const credits = await getCredits(userId);
-  return credits >= required;
-}
-
-/**
  * Subtract credits for billing cycle end (can go to 0, never negative)
  * This is used for subscription billing cycles, not regular usage
  */

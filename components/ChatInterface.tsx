@@ -10,6 +10,7 @@ import { updateProjectNameAction, loadProjectById, saveChatMessageToDatabase } f
 import { streamMessageToAgent } from '@/lib/utils/streaming-client';
 import { useUser } from '@/hooks/useUser';
 import { fetchUserCredits } from '@/lib/utils/credits-client';
+import { ModelSelector } from '@/components/ModelSelector';
 
 interface Message {
   id: string;
@@ -42,6 +43,7 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
   const [credits, setCredits] = useState<number>(0);
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(0);
+  const [selectedModel, setSelectedModel] = useState<string>('google/gemini-2.5-flash');
   
   // Get current user
   const { user, isLoading: isLoadingUser } = useUser();
@@ -327,7 +329,8 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
             }
             return msg;
           }));
-        }
+        },
+        selectedModel
       );
 
       if (!agentResult.success) {
@@ -515,6 +518,10 @@ const ChatInterface = ({ projectId }: ChatInterfaceProps) => {
                   <Edit3 className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               )}
+              <ModelSelector 
+                selectedModel={selectedModel}
+                onModelChange={setSelectedModel}
+              />
             </div>
           </div>
         </div>
