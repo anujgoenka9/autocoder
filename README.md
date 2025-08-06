@@ -23,7 +23,7 @@ An AI-powered code generation SaaS application built with **Next.js** that allow
 
 ### AI & Code Execution
 - **AI Agent**: Custom LangGraph-based agent deployed as separate FastAPI service
-- **LLM**: [Google Gemini 2.5 Flash](https://ai.google.dev/gemini) via OpenRouter
+- **LLM**: Multiple AI models via OpenRouter (Google Gemini, Anthropic Claude, OpenAI GPT, MoonshotAI Kimi, Qwen)
 - **Code Sandbox**: [E2B](https://e2b.dev/) for isolated code execution environments
 - **Agent Observability**: [LangSmith](https://www.langchain.com/langsmith) (optional)
 - **Streaming**: Real-time streaming responses via Server-Sent Events
