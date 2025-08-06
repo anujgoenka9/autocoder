@@ -165,6 +165,16 @@ The application uses a sophisticated AI agent built with LangGraph that can:
 - Execute code in isolated sandbox environments
 - Maintain project context across conversations
 - Stream responses for better user experience
+- **Multi-Model Support**: Choose from various AI models including:
+
+**Available AI Models:**
+- **Google**: gemini-2.5-flash-lite, gemini-2.5-flash, gemini-2.5-pro
+- **Anthropic**: claude-sonnet-4, claude-3.7-sonnet, claude-3.5-haiku
+- **OpenAI**: gpt-4.1-nano, gpt-4.1-mini, gpt-4.1, o3
+- **MoonshotAI**: kimi-k2
+- **Qwen**: qwen3-coder
+
+Users can select their preferred AI model from a dropdown menu in the chat interface, allowing them to choose the best model for their specific coding needs.
 
 ### Real-time Collaboration
 - Server-Sent Events (SSE) for live project updates
