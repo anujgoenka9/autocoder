@@ -1,0 +1,9 @@
+.git
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.ipynb
+sandbox-templates/**
+tests/**
+.env

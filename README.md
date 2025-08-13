@@ -30,7 +30,7 @@ An AI-powered code generation SaaS application built with **Next.js** that allow
 
 ### Infrastructure & Deployment
 - **Frontend Deployment**: [Vercel](https://vercel.com/)
-- **Agent API Deployment**: [Railway](https://railway.app/) (separate service)
+- **Agent API Deployment**: [Railway](https://railway.app/) or **AWS ECS (Bedrock AgentCore)** (separate service)
 - **Database Hosting**: [Supabase](https://supabase.com/)
 - **Redis Hosting**: [Upstash](https://upstash.com/) or similar
 - **Environment**: Node.js 18+ with pnpm package manager
@@ -115,6 +115,129 @@ docker run -p 8000:8000 autocoder-agent
    - Deploy the `Coding Agent API/` directory to Railway
    - Set environment variables for the agent service
    - Update `NEXT_PUBLIC_AGENT_API_BASE_URL` in frontend
+
+2b. **AI Agent API (AWS Bedrock AgentCore on ECS Fargate)**
+
+   This project includes an AgentCore-compatible entrypoint at `Coding Agent API/agentcore_entrypoint.py` and a dedicated Dockerfile at `Coding Agent API/Dockerfile.agentcore`. Deploying via AWS ECR + ECS Fargate lets you run the AgentCore runtime behind an ALB with health checks.
+
+   - Build and push image to ECR (uses `Dockerfile.agentcore`):
+     ```bash
+     ACCOUNT_ID="123456789012"
+     REGION="us-east-1"
+     REPO="autocoder-agentcore"
+     TAG="v1"
+
+     aws ecr create-repository --repository-name "$REPO" --region "$REGION" || true
+     aws ecr get-login-password --region "$REGION" | docker login --username AWS --password-stdin "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
+
+     # Build from the folder using the AgentCore Dockerfile
+     docker build -f "Coding Agent API/Dockerfile.agentcore" -t "$REPO:$TAG" "Coding Agent API"
+     docker tag "$REPO:$TAG" "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPO:$TAG"
+     docker push "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com/$REPO:$TAG"
+     ```
+
+   - IAM
+     - Ensure `ecsTaskExecutionRole` exists with policy `AmazonECSTaskExecutionRolePolicy`.
+     - If using Secrets Manager, allow `secretsmanager:GetSecretValue` on your secrets (via task role or execution role as appropriate).
+
+   - Logs
+     - Create a CloudWatch Logs group, e.g. `/ecs/agentcore` in your region.
+
+   - Task definition (Fargate)
+     - CPU/memory: start with 0.5 vCPU (512) and 1 GB (1024)
+     - Network mode: `awsvpc`
+     - Container port: `8000`
+     - Env/secrets: set `OPENROUTER_API_KEY`, `E2B_API_KEY` (prefer Secrets Manager)
+     - Logs: `awslogs` to `/ecs/agentcore`
+     - Image: use your ECR image URI
+
+     Example (adjust ARNs/region/image/secrets):
+     ```json
+     {
+       "family": "agentcore-task",
+       "networkMode": "awsvpc",
+       "requiresCompatibilities": ["FARGATE"],
+       "cpu": "512",
+       "memory": "1024",
+       "executionRoleArn": "arn:aws:iam::123456789012:role/ecsTaskExecutionRole",
+       "taskRoleArn": "arn:aws:iam::123456789012:role/ecsTaskRole",
+       "containerDefinitions": [
+         {
+           "name": "agentcore",
+           "image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/autocoder-agentcore:v1",
+           "portMappings": [
+             { "containerPort": 8000, "hostPort": 8000, "protocol": "tcp" }
+           ],
+           "environment": [
+             { "name": "PYTHONUNBUFFERED", "value": "1" }
+           ],
+           "secrets": [
+             {
+               "name": "OPENROUTER_API_KEY",
+               "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:openrouter_api_key_abc"
+             },
+             {
+               "name": "E2B_API_KEY",
+               "valueFrom": "arn:aws:secretsmanager:us-east-1:123456789012:secret:e2b_api_key_xyz"
+             }
+           ],
+           "logConfiguration": {
+             "logDriver": "awslogs",
+             "options": {
+               "awslogs-group": "/ecs/agentcore",
+               "awslogs-region": "us-east-1",
+               "awslogs-stream-prefix": "ecs"
+             }
+           },
+           "essential": true
+         }
+       ]
+     }
+     ```
+
+   - Cluster and service
+     - Create an ECS cluster (Fargate)
+     - Create a service:
+       - Desired count: 1
+       - Launch type: Fargate
+       - VPC/subnets: choose at least two subnets
+       - Security group: allow inbound from the ALB security group; egress to the internet
+       - Assign public IP: yes (only if you skip ALB and want public access directly)
+
+   - Load balancer (recommended)
+     - Application Load Balancer with listener HTTP 80 (and HTTPS 443 if using ACM cert)
+     - Target group: protocol HTTP, port 8000, health check path `/ping`, success codes `200`, health check port "traffic-port"
+     - Register the ECS service to that target group
+
+   - DNS (optional but recommended)
+     - Point your domain to the ALB using a Route 53 alias A/AAAA record
+
+   - Test
+     ```bash
+     # Replace with your ALB DNS name or domain
+     BASE_URL="http://your-alb-dns-name"
+
+     # Health check
+     curl -s "$BASE_URL/ping"
+
+     # Invoke the AgentCore entrypoint
+     curl -s -X POST "$BASE_URL/api/agent" \
+       -H 'Content-Type: application/json' \
+       -d '{
+             "user_id": "alice_123",
+             "project_id": "todo_app_v1",
+             "task": "Create a simple React todo app with add/delete functionality",
+             "model": "google/gemini-2.5-flash"
+           }'
+     ```
+
+   - Notes/gotchas
+     - The container listens on `0.0.0.0:8000` and serves `/api/agent`, `/invocations`, and `/ping`.
+     - If health checks fail: verify the target group path `/ping`, success code `200`, and port set to "traffic-port".
+     - Ensure security groups allow ALB → service traffic.
+     - Check CloudWatch logs for startup errors or missing env vars.
+     - Prefer Secrets Manager for API keys; avoid plaintext env vars.
+     - If you skip the ALB, you can assign a public IP on the service ENI and allow inbound 8000; however, ALB is recommended for stability, health checks, and HTTPS.
 
 3. **Database (Supabase)**
    - Create a new Supabase project
