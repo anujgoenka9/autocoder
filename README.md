@@ -251,7 +251,7 @@ docker run -p 8000:8000 autocoder-agent
 ## Project Structure
 
 ```
-saas-starter/
+autocoder/
 ├── app/                          # Next.js App Router
 │   ├── (dashboard)/             # Protected dashboard routes
 │   ├── (login)/                 # Authentication routes
