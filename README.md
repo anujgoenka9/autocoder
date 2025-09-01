@@ -2,7 +2,6 @@
 
 An AI-powered code generation SaaS application built with **Next.js** that allows users to create and modify Next.js projects using natural language. The application features a sophisticated AI agent that can generate, modify, and execute code in real-time sandbox environments.
 
-**Demo: [https://www.autocodingai.space/](https://www.autocodingai.space/)**
 
 ## Tech Stack
 
